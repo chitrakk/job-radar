@@ -1,0 +1,48 @@
+# Saved searches the scheduled run executes.
+#
+# These decide what enters the corpus. Sources that support server-side search (Adzuna,
+# LinkedIn, Remotive) receive these keywords directly; sources that return a whole company
+# board (the ATS providers) are filtered against them locally.
+#
+# Keep the set broad rather than narrow — the frontend does fine-grained filtering, so the
+# job of this file is to define the pool, not the final result.
+
+defaults:
+  country: in
+  location: India
+  max_age_days: 45
+  limit: 400
+  remote_only: false
+  # Require postings to actually be in India (or open worldwide-remote, which an India-based
+  # candidate can take). Without this the corpus fills with San Francisco roles that merely
+  # matched a keyword — measured: 1356 jobs of which only ~70 were Indian.
+  strict_location: true
+
+queries:
+  - name: Data & analytics
+    keywords:
+      [
+        data analyst,
+        business analyst,
+        data scientist,
+        analytics,
+        business intelligence,
+      ]
+
+  - name: Product & strategy
+    keywords: [product manager, associate product manager, product analyst, strategy]
+
+  - name: Finance & consulting
+    keywords:
+      [financial analyst, investment banking, equity research, consultant, corporate finance]
+
+  - name: Software engineering
+    keywords: [software engineer, backend engineer, full stack developer, python developer]
+
+  # Remote roles an India-based candidate can actually take. Location stays "India" on
+  # purpose: matches_location() treats a worldwide-remote posting as satisfying India, but
+  # still rejects the many listings that say "Remote" and then "US only" — which is what
+  # leaks in if you set location to "" here.
+  - name: Remote (India-eligible)
+    remote_only: true
+    keywords: [data analyst, product manager, software engineer, business analyst]

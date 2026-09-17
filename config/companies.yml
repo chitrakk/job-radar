@@ -1,0 +1,93 @@
+# Company ATS board tokens, polled every run.
+#
+# Every token in this file was verified live against its endpoint — run
+# `uv run python scripts/verify_boards.py` to re-check and see which have gone dead.
+# Board tokens rot as companies switch ATS, so expect to prune this occasionally.
+#
+# To add a company: open its careers page and read the token out of the URL its job list
+# loads from — boards.greenhouse.io/<token>, jobs.lever.co/<token>, jobs.ashbyhq.com/<token>,
+# apply.workable.com/<token>, jobs.smartrecruiters.com/<token>, <token>.recruitee.com.
+#
+# A note on India coverage, established by probing ~150 candidate tokens: Indian-domestic
+# employers mostly do NOT use these ATS platforms (they run Darwinbox, Keka, Workday,
+# SuccessFactors or Naukri's own RMS, none of which expose a public job API). What this
+# list does give you is (a) global companies that hire heavily into Bengaluru/Hyderabad/
+# Pune/Gurugram, and (b) India-founded product companies that sell globally. For
+# India-domestic listings the load-bearing sources are Adzuna and LinkedIn, not this file.
+
+ats:
+  greenhouse:
+    - { token: databricks, name: Databricks }
+    - { token: stripe, name: Stripe }
+    - { token: anthropic, name: Anthropic }
+    - { token: doordashusa, name: DoorDash }
+    - { token: mongodb, name: MongoDB }
+    - { token: cloudflare, name: Cloudflare }
+    - { token: elastic, name: Elastic }
+    - { token: scaleai, name: Scale AI }
+    - { token: gitlab, name: GitLab }
+    - { token: coinbase, name: Coinbase }
+    - { token: affirm, name: Affirm }
+    - { token: airbnb, name: Airbnb }
+    - { token: reddit, name: Reddit }
+    - { token: figma, name: Figma }
+    - { token: robinhood, name: Robinhood }
+    - { token: twilio, name: Twilio }
+    - { token: rubrik, name: Rubrik }
+    - { token: instacart, name: Instacart }
+    - { token: asana, name: Asana }
+    - { token: gusto, name: Gusto }
+    - { token: vercel, name: Vercel }
+    - { token: highradius, name: HighRadius }
+    - { token: duolingo, name: Duolingo }
+    - { token: chime, name: Chime }
+    - { token: sigmacomputing, name: Sigma Computing }
+    - { token: discord, name: Discord }
+    - { token: dropbox, name: Dropbox }
+    - { token: druva, name: Druva }
+    - { token: slice, name: Slice }
+    - { token: nucleus, name: Nucleus Software }
+    - { token: razorpaysoftwareprivatelimited, name: Razorpay }
+    - { token: observeai, name: Observe.AI }
+    - { token: groww, name: Groww }
+    - { token: porter, name: Porter }
+
+  lever:
+    - { token: palantir, name: Palantir }
+    - { token: matchgroup, name: Match Group }
+    - { token: spotify, name: Spotify }
+    - { token: meesho, name: Meesho }
+    - { token: porter, name: Porter }
+    - { token: zeta, name: Zeta }
+    - { token: epifi, name: Fi Money }
+    - { token: newton, name: Newton School }
+
+  ashby:
+    - { token: openai, name: OpenAI }
+    - { token: harvey, name: Harvey }
+    - { token: elevenlabs, name: ElevenLabs }
+    - { token: sierra, name: Sierra }
+    - { token: ramp, name: Ramp }
+    - { token: decagon, name: Decagon }
+    - { token: cursor, name: Cursor }
+    - { token: baseten, name: Baseten }
+    - { token: vanta, name: Vanta }
+    - { token: replit, name: Replit }
+    - { token: sarvam, name: Sarvam AI }
+    - { token: writer, name: Writer }
+    - { token: abridge, name: Abridge }
+    - { token: modal, name: Modal }
+    - { token: linear, name: Linear }
+    - { token: warp, name: Warp }
+    - { token: andela, name: Andela }
+    - { token: posthog, name: PostHog }
+    - { token: resend, name: Resend }
+    - { token: atlan, name: Atlan }
+    - { token: zapier, name: Zapier }
+    - { token: neon, name: Neon }
+
+  smartrecruiters:
+    - { token: BoschGroup, name: Bosch }
+
+  workable: []
+  recruitee: []

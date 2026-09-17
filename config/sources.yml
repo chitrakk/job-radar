@@ -1,0 +1,63 @@
+# Per-source switches. Anything omitted uses the adapter's own defaults.
+#
+# Tier 1 sources are public APIs that do not block datacenter IPs — leave these on.
+# Tier 2 sources are scraped and are expected to fail from GitHub Actions runners; they
+# are off by default so phase 1 runs stay clean. Turn them on once you have either tested
+# them or added JOBRADAR_PROXY_URL (a residential proxy) as a repository secret.
+
+corpus:
+  # Postings older than this drop out of the corpus entirely.
+  window_days: 60
+
+sources:
+  # ---------------------------------------------------------------- tier 1
+  ats:greenhouse:
+    enabled: true
+  ats:lever:
+    enabled: true
+  ats:ashby:
+    enabled: true
+  ats:workable:
+    enabled: true
+  ats:smartrecruiters:
+    enabled: true
+  ats:recruitee:
+    enabled: true
+
+  adzuna:
+    enabled: true
+    pages: 2 # 50 results/page. Free tier is ~1000 calls/month — keep this low.
+
+  linkedin:
+    enabled: true
+    max_pages: 3
+    min_interval: 4.0 # slowest source on purpose; it is the easiest one to lose
+
+  remoteok:
+    enabled: true
+  remotive:
+    enabled: true
+  arbeitnow:
+    enabled: true
+    pages: 2
+  himalayas:
+    enabled: true
+  weworkremotely:
+    enabled: true
+  hn_hiring:
+    enabled: true
+
+  # ---------------------------------------------------------------- tier 2
+  # Best-effort scrapers. Naukri answers datacenter IPs with HTTP 406 and Indeed India
+  # runs Cloudflare Turnstile, so these will mostly report "blocked" from Actions until a
+  # residential proxy is configured. Failures degrade the run; they never fail it.
+  naukri:
+    enabled: false
+  indeed_in:
+    enabled: false
+  foundit:
+    enabled: false
+  timesjobs:
+    enabled: false
+  instahyre:
+    enabled: false

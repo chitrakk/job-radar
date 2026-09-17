@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh --version)",
+      "Bash(git --version)",
+      "WebFetch(domain:github.com)",
+      "Bash(uv --version)",
+      "Bash(npm --version)",
+      "Bash(git init *)",
+      "Bash(mkdir -p .github/workflows config backend/jobradar/sources backend/tests/fixtures frontend/src/components)",
+      "Bash(uv venv *)",
+      "Bash(uv pip *)",
+      "Bash(uv run *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -)",
+      "Read(//Users/chitrakkumar/Desktop/Synvesco/Saulikh/**)"
+    ]
+  }
+}

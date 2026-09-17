@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/components/filterbar.tsx","./src/components/jobcard.tsx","./src/components/sourcehealthbar.tsx","./src/lib/format.ts","./src/lib/search.ts"],"version":"5.9.3"}

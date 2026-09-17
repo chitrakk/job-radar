@@ -1,0 +1,21 @@
+# The corpus is generated and published to the `data` branch by CI, not committed to main.
+/data/
+/frontend/public/data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+/frontend/dist/
+
+# Local secrets. Never commit these — CI reads them from GitHub Secrets instead.
+.env
+.env.local
+
+.DS_Store

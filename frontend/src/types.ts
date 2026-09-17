@@ -1,0 +1,72 @@
+/** Mirrors Job.index_entry() in backend/jobradar/models.py. */
+export interface JobEntry {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  remote: "onsite" | "hybrid" | "remote" | "unknown";
+  url: string;
+  source: string;
+  tier: "tier1" | "tier2";
+  posted_at: string | null;
+  first_seen_at: string;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_currency: string;
+  salary_text: string;
+  skills: string[];
+  seniority: "intern" | "entry" | "mid" | "senior" | "lead" | "exec" | "unknown";
+  summary: string;
+  tags: string[];
+}
+
+/** Mirrors SourceHealth. */
+export interface SourceHealth {
+  source: string;
+  tier: "tier1" | "tier2";
+  ok: boolean;
+  jobs_found: number;
+  error: string;
+  duration_ms: number;
+  checked_at: string;
+}
+
+export interface Meta {
+  updated_at: string;
+  total_jobs: number;
+  sources_ok: number;
+  sources_failed: number;
+  by_source: Record<string, number>;
+  enriched: number;
+  tiers: { tier1: number; tier2: number };
+}
+
+/** Full detail for one job, loaded lazily from jobs/<shard>.json. */
+export interface JobDetail {
+  description: string;
+  apply_url: string;
+  salary_period: string;
+  enriched: boolean;
+}
+
+export interface Filters {
+  q: string;
+  location: string;
+  remote: string;
+  seniority: string;
+  source: string;
+  maxAgeDays: number;
+  minSalary: number;
+  sort: "relevance" | "newest" | "salary";
+}
+
+export const EMPTY_FILTERS: Filters = {
+  q: "",
+  location: "",
+  remote: "",
+  seniority: "",
+  source: "",
+  maxAgeDays: 0,
+  minSalary: 0,
+  sort: "relevance",
+};

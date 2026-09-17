@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  --color-line: #e2e8f0;
+  --color-accent: #2563eb;
+  --color-surface: #ffffff;
+  --color-canvas: #f8fafc;
+}
+
+/* Dark mode follows the OS. Every colour used in the app is defined in both places so a
+   viewer in dark mode never gets a white flash or an unreadable panel. */
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-ink: #e2e8f0;
+    --color-muted: #94a3b8;
+    --color-line: #1e293b;
+    --color-accent: #60a5fa;
+    --color-surface: #0f172a;
+    --color-canvas: #020617;
+  }
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Respect a reduced-motion preference rather than animating regardless. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

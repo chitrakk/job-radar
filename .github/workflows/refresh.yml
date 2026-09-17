@@ -1,0 +1,145 @@
+name: Refresh jobs
+
+# Runs entirely on GitHub's infrastructure — nothing here depends on a local machine.
+on:
+  schedule:
+    # Every 4 hours. GitHub queues cron runs under load, so treat this as "about every 4h".
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+    inputs:
+      rebuild:
+        description: "Discard the stored corpus and rebuild from scratch"
+        type: boolean
+        default: false
+      only:
+        description: "Comma-separated source names to run (blank = all)"
+        type: string
+        default: ""
+  push:
+    branches: [main]
+    # A code or config change should be reflected without waiting for the next cron tick.
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "config/**"
+      - ".github/workflows/refresh.yml"
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write # to push the corpus to the data branch
+  pages: write
+  id-token: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore stored corpus
+        # The corpus lives on an orphan `data` branch rather than in main's history, so
+        # four-hourly commits never bloat the repo you actually work in. First run has no
+        # branch yet, which is fine — the pipeline just starts from empty.
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git fetch origin data --depth=1
+            git worktree add /tmp/corpus origin/data
+            mkdir -p data && cp -r /tmp/corpus/. data/ 2>/dev/null || true
+            rm -rf data/.git
+            echo "restored $(ls data | wc -l) corpus files"
+          else
+            echo "no data branch yet; starting fresh"
+            mkdir -p data
+          fi
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install backend
+        working-directory: backend
+        run: uv venv --python 3.12 && uv pip install -e .
+
+      - name: Collect jobs
+        working-directory: backend
+        env:
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # Optional residential proxy. Without it the Tier 2 scrapers report as blocked,
+          # which is expected from a GitHub runner's datacenter IP.
+          JOBRADAR_PROXY_URL: ${{ secrets.JOBRADAR_PROXY_URL }}
+        run: |
+          uv run jobradar pipeline \
+            --data-dir ../data \
+            ${{ inputs.rebuild && '--rebuild' || '' }} \
+            ${{ inputs.only && format('--only {0}', inputs.only) || '' }}
+
+      - name: Report source health
+        run: |
+          echo "### Source health" >> $GITHUB_STEP_SUMMARY
+          echo "| Source | Status | Jobs | Time |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import json
+          for h in sorted(json.load(open('data/health.json')), key=lambda h: -h['jobs_found']):
+              mark = '✅' if h['ok'] else '⚠️'
+              note = h['error'][:60] if not h['ok'] else ''
+              print(f\"| {h['source']} | {mark} {note} | {h['jobs_found']} | {h['duration_ms']}ms |\")
+          " >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat data/meta.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Publish corpus to data branch
+        run: |
+          cd data
+          git init -q
+          git checkout -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git -c commit.gpgsign=false commit -q -m "corpus $(date -u +%Y-%m-%dT%H:%MZ)" || {
+            echo "no corpus changes"; exit 0;
+          }
+          # Force-push a single-commit branch: this is a data snapshot, not history worth
+          # keeping, and squashing here is what stops the repo growing without bound.
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build site
+        working-directory: frontend
+        run: |
+          npm ci
+          mkdir -p public
+          cp -r ../data public/data
+          npm run build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: refresh
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

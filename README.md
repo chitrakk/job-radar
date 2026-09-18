@@ -1,8 +1,8 @@
 # 📡 Job Radar
 
-Aggregates job postings from across the internet into one searchable web app, refreshed
-every four hours by GitHub Actions. Runs entirely on GitHub infrastructure — once deployed,
-nothing depends on your laptop being on.
+Finds relevant jobs across the internet, scores your CV against them, drafts outreach to the
+right person, and preps you for the interview. Refreshed every four hours by GitHub Actions
+and served as a web app anyone can use — once deployed, nothing depends on your laptop.
 
 **Live site:** `https://<your-username>.github.io/<repo>/` (after the first deploy)
 
@@ -24,6 +24,30 @@ GitHub Pages (static React app, free, always on)
 
 The corpus is published to an orphan `data` branch (force-pushed each run, so four-hourly
 commits never bloat `main`) and copied into the Pages deploy.
+
+## What it does
+
+| | |
+| --- | --- |
+| **Find** | 14 sources, deduplicated across boards, ranked by relevance and recency. India-aware location matching. |
+| **Score your CV** | Out of 100 across 8 weighted criteria, with grounded rewrite suggestions and the keywords a target role expects. |
+| **Draft outreach** | Finds who to contact, infers their email pattern, writes a LinkedIn note and a cold email — then checks its own output for AI slop. |
+| **Prep for interview** | Likely questions for *that* posting, STAR outlines from your real CV, and the gaps they will probe. |
+| **Track** | Applications, outreach and CV scores written to a Google Sheet you own. |
+
+### On outreach: it drafts, you send
+
+The agent researches and writes. It does **not** send, and it does not drive a logged-in
+LinkedIn session. Automating connection requests breaches LinkedIn's User Agreement and their
+automation detection restricts or permanently bans accounts — and it is *your* network at
+risk. One considered message you send by hand beats fifty automated ones from a banned
+account. Every draft is checked against the
+[no-ai-slop](https://github.com/petergyang/no-ai-slop) patterns before you see it, because a
+recruiter who can tell a message was generated is worse than no message.
+
+Nothing in the CV or outreach path invents experience. Where a rewrite needs a metric you did
+not supply, you get a `[X%]` placeholder to fill in — never a guessed number you would have to
+defend in an interview.
 
 ---
 
@@ -77,8 +101,9 @@ the pipeline runs without them, just with fewer sources.
 | Secret | Why | Free? |
 | --- | --- | --- |
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | India-domestic jobs. Sign up at [developer.adzuna.com](https://developer.adzuna.com) | Yes, 1000 calls/mo |
-| `GEMINI_API_KEY` | AI enrichment (phase 2), tried first | Yes |
-| `GROQ_API_KEY` | AI enrichment fallback when Gemini hits quota | Yes |
+| `GEMINI_API_KEY` | Job enrichment + career tools. Tried first | Yes |
+| `GROQ_API_KEY` | Fallback when Gemini hits its daily quota | Yes |
+| `SHEETS_WEBAPP_URL`, `SHEETS_SECRET` | Google Sheets tracker (CLI only) | Yes |
 | `JOBRADAR_PROXY_URL` | Turns on Tier 2 scrapers | No (residential proxy) |
 
 ### 4. Run it
@@ -107,6 +132,39 @@ uv run python scripts/verify_boards.py
 
 ---
 
+## Career tools
+
+Available two ways: in the web app (**My CV** tab and the buttons on any expanded job), and
+from the CLI. Both read the same rubric and prompts from `shared/`, so the score is the same.
+
+```bash
+uv run jobradar career find "data analyst"              # list job ids
+uv run jobradar career score-cv ~/cv.pdf                # score out of 100
+uv run jobradar career score-cv ~/cv.pdf --job b6edc6   # score against one posting
+uv run jobradar career outreach b6edc6 --cv ~/cv.pdf    # contacts + drafts (sends nothing)
+uv run jobradar career interview b6edc6 --cv ~/cv.pdf   # prep pack
+uv run jobradar career track b6edc6 --status Applied    # log to Google Sheets
+uv run jobradar career check-text draft.txt --kind email  # slop check, no AI needed
+```
+
+The slop check needs no API key at all — it is pure pattern matching, so it is free,
+instant, reproducible, and cannot hallucinate a verdict.
+
+### Privacy
+
+In the web app your CV, API keys and tracker credentials live in **your browser's local
+storage only**. There is no server to send them to. Your CV is included as prompt text in
+requests to Gemini or Groq when you click a button, so it reaches your chosen model provider
+and nobody else.
+
+### Google Sheets tracker
+
+Deploy `sheets/Code.gs` as an Apps Script web app bound to your own spreadsheet, then paste
+the URL and secret into Settings. Each person gets their own sheet — no shared database, no
+service-account key, no OAuth server. Setup steps are in the file's header comment.
+
+---
+
 ## Local development
 
 Needs Python 3.12 (`uv` provisions it; your system Python is untouched) and Node 22.
@@ -120,7 +178,7 @@ uv run jobradar sources                          # what's registered and enabled
 uv run jobradar scrape --source linkedin -q "data analyst" --location Bengaluru
 uv run jobradar pipeline --dry-run --no-llm      # full run, writes nothing
 uv run jobradar pipeline --no-llm                # writes ../data
-uv run pytest                                    # 68 tests, no live network
+uv run pytest                                    # 104 tests, no live network
 
 cd ../frontend
 npm install
@@ -145,7 +203,19 @@ backend/jobradar/
   search.py      relevance ranking — mirrored in frontend/src/lib/search.ts
   store.py       corpus read/write, index + sharded descriptions
   pipeline.py    orchestration; no single source can fail a run
+  llm.py         Gemini → Groq fallback; never blocks a run
+  enrich.py      skills/seniority/summary for newly-seen postings only
+  career/
+    cv.py        CV scoring; model scores clamped to each criterion's max
+    outreach.py  contact discovery + drafting. Researches and drafts; never sends
+    interview.py prep pack grounded in the posting and your CV
+    slop.py      deterministic AI-slop detection, no model call
+    sheets.py    Apps Script tracker client
+shared/          rubric, slop patterns and prompts — read by BOTH Python and the browser,
+                 with a test that runs the patterns through Node to prove they behave
+                 identically in each
 frontend/src/    React + Tailwind static app
+sheets/Code.gs   Apps Script web app for the tracker
 config/          queries, companies, source switches
 ```
 

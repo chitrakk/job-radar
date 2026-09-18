@@ -13,7 +13,18 @@
       "Bash(uv run *)",
       "Bash(python3 -c ' *)",
       "Bash(python3 -)",
-      "Read(//Users/chitrakkumar/Desktop/Synvesco/Saulikh/**)"
+      "Read(//Users/chitrakkumar/Desktop/Synvesco/Saulikh/**)",
+      "Read(//Users/chitrakkumar/.claude/skills/**)",
+      "Bash(python3 -c \"import importlib.util as u; print\\('playwright pkg:', bool\\(u.find_spec\\('playwright'\\)\\)\\)\")",
+      "Bash(uv run python -c ' *)",
+      "Bash(touch jobradar/career/__init__.py)",
+      "Bash(npx tsc *)",
+      "Bash(rm -rf public/data)",
+      "Bash(cp -r ../data public/data)",
+      "Bash(npm run *)",
+      "Bash(rm -rf frontend/public/data)",
+      "Bash(git add *)",
+      "Bash(git -c 'user.name=Chitrak Kumar' -c user.email=chitrakk2020@iimbg.ac.in commit -q -m ' *)"
     ]
   }
 }

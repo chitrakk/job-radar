@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "total": 100,
+  "note": "Weights are tuned for getting past an ATS screen and then a recruiter's 20-second skim, which is where most CVs die. Impact and keyword alignment dominate because those are what actually decide a callback; formatting matters but is cheap to fix.",
+  "criteria": [
+    {
+      "id": "impact",
+      "label": "Impact and quantification",
+      "weight": 20,
+      "what_good_looks_like": "Most bullets state an outcome with a number — money, time, volume, percentage, headcount or scale. Written as achievements, not duties.",
+      "common_failures": [
+        "Bullets describe responsibilities (\"Responsible for managing...\") instead of results",
+        "Numbers absent entirely, or only vague intensifiers like \"significantly improved\"",
+        "Numbers present but with no baseline, so the scale is unreadable"
+      ],
+      "scoring_anchors": {
+        "18-20": "Nearly every bullet has a concrete, credible metric tied to a business outcome",
+        "13-17": "Roughly half the bullets are quantified; the rest are duty statements",
+        "7-12": "A few numbers, mostly in one role; the CV mainly lists responsibilities",
+        "0-6": "No quantification; reads as a job description rather than a record of results"
+      }
+    },
+    {
+      "id": "keyword_alignment",
+      "label": "Role and keyword alignment",
+      "weight": 18,
+      "what_good_looks_like": "The hard skills, tools and domain language in the target job description appear naturally in the CV, especially in the top third. Job titles map recognisably to the target role.",
+      "common_failures": [
+        "Uses synonyms the ATS will not match (\"MS Excel modelling\" when the JD says \"financial modeling\")",
+        "Key required skill is genuinely held but never named",
+        "Skills buried in a footer list rather than evidenced inside experience bullets"
+      ],
+      "scoring_anchors": {
+        "16-18": "Almost every must-have from the JD appears, evidenced in context rather than just listed",
+        "11-15": "Most core skills present, some only in a skills list",
+        "6-10": "Several must-haves missing or phrased in non-matching language",
+        "0-5": "Little overlap with the target role's vocabulary"
+      }
+    },
+    {
+      "id": "ats_parseability",
+      "label": "ATS parseability and format",
+      "weight": 12,
+      "what_good_looks_like": "Single column, standard section headings, text-based (not an image), consistent and parseable dates, no critical content inside tables, headers/footers or text boxes.",
+      "common_failures": [
+        "Two-column layout — many parsers read straight across and scramble the text",
+        "Section headings that parsers do not recognise (\"My Journey\" instead of \"Experience\")",
+        "Dates in inconsistent formats, or only years, making tenure unclear",
+        "Contact details inside a header/footer, where some parsers drop them"
+      ],
+      "scoring_anchors": {
+        "11-12": "Clean single column, standard headings, unambiguous dates, fully text-based",
+        "8-10": "Mostly clean with one risky element",
+        "4-7": "Multiple parser hazards — columns, graphics or non-standard headings",
+        "0-3": "Likely to be badly mangled or rejected by an ATS"
+      }
+    },
+    {
+      "id": "clarity",
+      "label": "Clarity and concision",
+      "weight": 12,
+      "what_good_looks_like": "Bullets are one to two lines, start with a strong past-tense action verb, and carry one idea each. No filler, no throat-clearing.",
+      "common_failures": [
+        "Bullets running to four or five lines",
+        "Passive voice (\"was responsible for\", \"was tasked with\")",
+        "Repeating the same opening verb across many bullets",
+        "Corporate filler — \"leveraged synergies\", \"spearheaded initiatives\""
+      ],
+      "scoring_anchors": {
+        "11-12": "Every bullet is tight, active and single-idea",
+        "8-10": "Generally tight with a few long or passive bullets",
+        "4-7": "Frequently wordy or passive; hard to skim",
+        "0-3": "Dense paragraphs; a recruiter cannot skim this in 20 seconds"
+      }
+    },
+    {
+      "id": "structure",
+      "label": "Structure and completeness",
+      "weight": 10,
+      "what_good_looks_like": "Contact details complete and reachable. Sections in the order a reader needs them for this role. Length fits experience — one page under ~8 years, two pages beyond. Reverse-chronological.",
+      "common_failures": [
+        "Missing phone, email, city or LinkedIn URL",
+        "Education above experience for an experienced candidate, or vice versa for a fresher",
+        "Three pages for five years of experience",
+        "No summary where the career pivot needs explaining"
+      ],
+      "scoring_anchors": {
+        "9-10": "Complete, correctly ordered for this candidate, right length",
+        "7-8": "Complete but ordering or length is slightly off",
+        "4-6": "A section missing, or noticeably too long",
+        "0-3": "Key contact details or whole sections absent"
+      }
+    },
+    {
+      "id": "evidence",
+      "label": "Evidence and credibility",
+      "weight": 10,
+      "what_good_looks_like": "Claims are specific and checkable — named tools, real scope, concrete deliverables. Seniority claimed matches evidence shown.",
+      "common_failures": [
+        "Unverifiable superlatives (\"best performer\", \"expert-level\")",
+        "Claimed leadership with no team size or scope",
+        "Long tool lists with no evidence any were used seriously",
+        "Metrics implausible for the role's level"
+      ],
+      "scoring_anchors": {
+        "9-10": "Every significant claim is specific and independently plausible",
+        "7-8": "Mostly specific, a few unsupported assertions",
+        "4-6": "Several vague or inflated claims",
+        "0-3": "Reads as claims without evidence"
+      }
+    },
+    {
+      "id": "progression",
+      "label": "Progression and narrative",
+      "weight": 8,
+      "what_good_looks_like": "The sequence of roles tells a coherent story with visible growth in scope. Gaps and pivots are accounted for rather than left as questions.",
+      "common_failures": [
+        "Unexplained multi-month gaps",
+        "Lateral moves with no growth in scope",
+        "A pivot the reader cannot make sense of without asking"
+      ],
+      "scoring_anchors": {
+        "7-8": "Clear upward trajectory; any gap or pivot is explained",
+        "5-6": "Reasonable but with one open question",
+        "3-4": "Choppy history a screener will query",
+        "0-2": "Incoherent sequence or large unexplained gaps"
+      }
+    },
+    {
+      "id": "language_quality",
+      "label": "Language quality",
+      "weight": 10,
+      "what_good_looks_like": "Sounds like a competent human wrote it about their own work. No AI-generated cadence, no cliché stacking, no buzzword padding. Consistent tense and person.",
+      "common_failures": [
+        "AI-slop patterns — \"It's not just X, it's Y\", \"a testament to\", \"pivotal moment\"",
+        "Buzzword stacking with no content (\"dynamic, results-driven, detail-oriented professional\")",
+        "Mixed tense or first/third person within a section",
+        "Typos and inconsistent capitalisation of tool names"
+      ],
+      "scoring_anchors": {
+        "9-10": "Clean, specific, human. No slop patterns.",
+        "7-8": "Largely clean with a few clichés",
+        "4-6": "Noticeably generic or AI-sounding in places",
+        "0-3": "Reads as machine-generated or buzzword soup"
+      }
+    }
+  ],
+  "bands": [
+    { "min": 85, "label": "Strong", "meaning": "Ready to send. Tailor keywords per application and go." },
+    { "min": 70, "label": "Solid", "meaning": "Competitive. Fixing the top two or three items should tip most screens." },
+    { "min": 55, "label": "Needs work", "meaning": "Will pass some ATS filters but rarely survive a recruiter skim." },
+    { "min": 35, "label": "Weak", "meaning": "Likely filtered before a human reads it. Rewrite the experience bullets first." },
+    { "min": 0, "label": "Rebuild", "meaning": "Start from the structure and rewrite around quantified outcomes." }
+  ]
+}

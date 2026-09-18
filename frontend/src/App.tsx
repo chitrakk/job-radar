@@ -5,6 +5,9 @@ import { applyFilters } from "./lib/search";
 import { FilterBar } from "./components/FilterBar";
 import { JobCard } from "./components/JobCard";
 import { SourceHealthBar } from "./components/SourceHealthBar";
+import { CVPanel } from "./components/CVPanel";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { loadSettings, saveSettings, type Settings } from "./lib/settings";
 
 // The corpus sits next to the built site, so one relative base works for local preview and
 // for https://<user>.github.io/<repo>/ without knowing the repo name at build time.
@@ -49,6 +52,16 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(filtersFromUrl);
   const [shown, setShown] = useState(PAGE_SIZE);
+  const [view, setView] = useState<"jobs" | "cv" | "settings">("jobs");
+  const [settings, setSettings] = useState<Settings>(loadSettings);
+
+  function patchSettings(p: Partial<Settings>) {
+    setSettings((s) => {
+      const next = { ...s, ...p };
+      saveSettings(next);
+      return next;
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -92,17 +105,39 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-5xl items-baseline gap-3 px-4 py-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4">
           <h1 className="text-lg font-semibold tracking-tight text-ink">📡 Job Radar</h1>
-          <p className="hidden text-sm text-muted sm:block">
+          <p className="hidden flex-1 text-sm text-muted lg:block">
             Openings pulled from company job boards, LinkedIn and remote feeds
           </p>
+          <nav className="ml-auto flex gap-1" aria-label="Sections">
+            {(
+              [
+                ["jobs", "Jobs"],
+                ["cv", "My CV"],
+                ["settings", "Settings"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setView(id)}
+                aria-current={view === id ? "page" : undefined}
+                className={
+                  view === id
+                    ? "rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white"
+                    : "rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-muted hover:text-ink"
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
         </div>
       </header>
 
-      <SourceHealthBar health={health} meta={meta} />
+      {view === "jobs" && <SourceHealthBar health={health} meta={meta} />}
 
-      {jobs && (
+      {view === "jobs" && jobs && (
         <FilterBar
           filters={filters}
           onChange={patch}
@@ -113,6 +148,18 @@ export default function App() {
       )}
 
       <main className="mx-auto max-w-5xl px-4 py-5">
+        {view === "settings" && (
+          <SettingsPanel
+            settings={settings}
+            onChange={patchSettings}
+            onClose={() => setView("jobs")}
+          />
+        )}
+
+        {view === "cv" && <CVPanel settings={settings} onChange={patchSettings} />}
+
+        {view === "jobs" && (
+          <>
         {error && (
           <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
             <p className="font-medium text-ink">Could not load the job index.</p>
@@ -141,7 +188,7 @@ export default function App() {
 
         <div className="space-y-3">
           {results.slice(0, shown).map((job) => (
-            <JobCard key={job.id} job={job} dataBase={DATA_BASE} />
+            <JobCard key={job.id} job={job} dataBase={DATA_BASE} settings={settings} />
           ))}
         </div>
 
@@ -152,6 +199,8 @@ export default function App() {
           >
             Show more ({(results.length - shown).toLocaleString("en-IN")} remaining)
           </button>
+        )}
+          </>
         )}
       </main>
 

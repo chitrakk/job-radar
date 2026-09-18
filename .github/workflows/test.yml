@@ -13,10 +13,15 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+      # Node is needed by test_shared_parity.py, which proves the shared slop patterns
+      # behave identically in Python and in the browser.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - working-directory: backend
         run: |
           uv venv --python 3.12
-          uv pip install -e ".[dev]"
+          uv pip install -e ".[dev,career]"
           uv run ruff check .
           # No live network in CI — every source test runs against recorded payloads.
           uv run pytest -q

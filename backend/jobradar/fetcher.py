@@ -43,6 +43,10 @@ class RateLimiter:
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
     async def wait(self, url: str, min_interval: float) -> None:
+        # Checked per call so tests can switch politeness delays off. Never set this in
+        # production — the delays are what keep us welcome on these endpoints.
+        if os.getenv("JOBRADAR_NO_THROTTLE"):
+            return
         host = urlsplit(url).netloc
         async with self._locks[host]:
             delta = time.monotonic() - self._last[host]

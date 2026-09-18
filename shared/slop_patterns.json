@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "source": "Patterns from github.com/petergyang/no-ai-slop, adapted for CVs, LinkedIn notes and cold emails.",
+  "why": "Recruiters now read dozens of obviously AI-written messages a day, so slop is worse than plain writing — it signals that no thought went in. These checks run as regex before any model call, so they are deterministic, free, and cannot themselves hallucinate.",
+  "patterns": [
+    {
+      "id": "binary_contrast",
+      "label": "\"It's not X, it's Y\" construction",
+      "regex": "\\b(?:it'?s|this is|that'?s|they'?re|we'?re)\\s+not\\s+(?:just\\s+)?[^.,;!?]{2,40}[,.]?\\s*(?:it'?s|this is|that'?s|they'?re|we'?re)\\s+",
+      "severity": "high",
+      "fix": "State the thing you actually mean, once."
+    },
+    {
+      "id": "throat_clearing",
+      "label": "Throat-clearing opener",
+      "regex": "\\b(?:here'?s the thing|let me be clear|let'?s be honest|make no mistake|here'?s what(?:'?s| is) (?:interesting|wild|surprising)|the truth is)\\b",
+      "severity": "high",
+      "fix": "Delete it and start with the point."
+    },
+    {
+      "id": "faux_insight",
+      "label": "Faux-insight setup",
+      "regex": "\\b(?:what (?:nobody|no one|few people) (?:tells you|talks about|realizes|realises)|the part (?:everyone|most people) miss(?:es)?|here'?s what (?:nobody|no one) says)\\b",
+      "severity": "high",
+      "fix": "If the insight is real, just say it. If it isn't, cut it."
+    },
+    {
+      "id": "importance_puffery",
+      "label": "Importance puffery",
+      "regex": "\\b(?:a testament to|marks? a (?:pivotal|defining|watershed) (?:moment|point)|speaks? volumes|underscor(?:es|ing) the importance|highlight(?:s|ing) (?:the|their|its) commitment|stands? as a)\\b",
+      "severity": "high",
+      "fix": "Replace with the concrete fact that made you want to say this."
+    },
+    {
+      "id": "fake_profound_ending",
+      "label": "Fake-profound ending",
+      "regex": "\\b(?:the future (?:isn'?t|is not) coming[.,]? it'?s (?:already )?here|and that changes everything|the rest is history|that'?s the (?:whole|entire) (?:point|thing|story))\\b",
+      "severity": "high",
+      "fix": "End on your actual ask instead."
+    },
+    {
+      "id": "dramatic_fragment",
+      "label": "Dramatic one-word fragment",
+      "regex": "(?:^|[.!?]\\s+)(?:Simple|Easy|Done|Exactly|Period|Full stop|That'?s it)\\.",
+      "severity": "medium",
+      "fix": "Fold it into the sentence before."
+    },
+    {
+      "id": "weasel_attribution",
+      "label": "Weasel attribution",
+      "regex": "\\b(?:experts? (?:agree|say)|studies show|research (?:shows|suggests)|it'?s (?:widely )?(?:known|believed)|many would argue)\\b",
+      "severity": "medium",
+      "fix": "Name the source or drop the claim."
+    },
+    {
+      "id": "colon_reveal",
+      "label": "Colon reveal",
+      "regex": "\\b(?:the (?:best|worst|real|hard) part|the result|the kicker|the catch|the problem|my favou?rite part)\\s*:",
+      "severity": "medium",
+      "fix": "Rewrite as one plain sentence."
+    },
+    {
+      "id": "delve_lexicon",
+      "label": "Telltale AI vocabulary",
+      "regex": "\\b(?:delve into|navigat(?:e|ing) the (?:complexities|landscape|world)|in today'?s (?:fast-paced|ever-evolving|digital) (?:world|landscape|environment)|unlock(?:ing)? (?:the )?(?:potential|power)|harness(?:ing)? the power|embark on|tapestry|realm of|plethora|myriad of|seamless(?:ly)? integrat|robust solution|cutting-edge|game-?changer|treasure trove)\\b",
+      "severity": "high",
+      "fix": "Use the plain word you would say out loud."
+    },
+    {
+      "id": "cv_buzzword_stack",
+      "label": "Buzzword stacking with no content",
+      "regex": "\\b(?:results?-(?:driven|oriented)|detail-oriented|self-motivated|dynamic professional|team player|hard-?working|go-?getter|think outside the box|synerg(?:y|ies|istic)|value[- ]add|passionate about (?:excellence|innovation))\\b",
+      "severity": "high",
+      "fix": "Delete. Replace the space with a quantified achievement — claiming 'detail-oriented' persuades nobody, shipping a 0-defect migration does."
+    },
+    {
+      "id": "responsible_for",
+      "label": "Duty statement instead of achievement",
+      "regex": "\\b(?:responsible for|tasked with|duties included|in charge of|helped (?:to )?(?:with|manage|support))\\b",
+      "severity": "high",
+      "fix": "Start with a past-tense action verb and end with the outcome."
+    },
+    {
+      "id": "vague_intensifier",
+      "label": "Unquantified intensifier",
+      "regex": "\\b(?:significantly|substantially|dramatically|drastically|considerably|greatly|vastly)\\s+(?:improved|increased|reduced|decreased|enhanced|optimized|optimised|boosted)\\b",
+      "severity": "medium",
+      "fix": "Put the number in. \"Significantly reduced\" means nothing; \"cut 38%\" does."
+    },
+    {
+      "id": "outreach_flattery",
+      "label": "Generic outreach flattery",
+      "regex": "\\b(?:I(?:'?m| am) (?:so )?(?:incredibly |truly |really )?(?:excited|thrilled|passionate) (?:about|to)|I(?:'?ve| have) (?:long )?(?:admired|been following) (?:your|the) (?:work|company|journey)|(?:huge|big) fan of what you(?:'?re| are) building|your company(?:'?s)? mission (?:really )?resonates)\\b",
+      "severity": "high",
+      "fix": "Name one specific thing — a product decision, a launch, a post — and why it is relevant to you."
+    },
+    {
+      "id": "outreach_hope_this",
+      "label": "Filler email opener",
+      "regex": "\\b(?:I hope this (?:email|message) finds you well|hope you(?:'?re| are) doing well|hope all is well|trust you are doing well)\\b",
+      "severity": "medium",
+      "fix": "Open with why you are writing. Recruiters skim the first line only."
+    },
+    {
+      "id": "reaching_out",
+      "label": "\"Reaching out\" boilerplate",
+      "regex": "\\b(?:I(?:'?m| am) reaching out (?:to you )?(?:because|as|regarding|to)|just wanted to reach out|wanted to touch base|circling back|following up on my previous)\\b",
+      "severity": "medium",
+      "fix": "Say the thing directly: \"I applied for X\" or \"I'd like to ask about X\"."
+    },
+    {
+      "id": "would_be_great_fit",
+      "label": "Asserting fit instead of showing it",
+      "regex": "\\b(?:I (?:would|'?d) be (?:a )?(?:great|perfect|strong|excellent) fit|I believe I (?:would be|am) (?:the )?(?:ideal|perfect|right)|my (?:skills|background) (?:align|make me) (?:perfectly )?(?:with|a))\\b",
+      "severity": "high",
+      "fix": "Show one piece of evidence that makes the fit obvious and let them conclude it."
+    },
+    {
+      "id": "em_dash_pileup",
+      "label": "Em-dash pile-up",
+      "regex": "—[^—]{1,80}—[^—]{1,80}—",
+      "severity": "low",
+      "fix": "Keep one em-dash per paragraph at most."
+    },
+    {
+      "id": "rule_of_three",
+      "label": "Reflexive rule-of-three adjectives",
+      "regex": "\\b\\w+ly,\\s+\\w+ly,\\s+and\\s+\\w+ly\\b|\\b(?:fast|clean|simple),\\s+(?:fast|clean|simple|reliable|scalable),\\s+and\\s+\\w+\\b",
+      "severity": "low",
+      "fix": "Pick the one that is true and drop the other two."
+    }
+  ],
+  "structural_checks": [
+    {
+      "id": "bullet_too_long",
+      "label": "Bullet longer than two lines",
+      "applies_to": "cv",
+      "threshold_chars": 200,
+      "fix": "Split it, or cut to the outcome."
+    },
+    {
+      "id": "repeated_opening_verb",
+      "label": "Same opening verb across bullets",
+      "applies_to": "cv",
+      "threshold_count": 3,
+      "fix": "Vary the verb — a screener notices the repetition before the content."
+    },
+    {
+      "id": "note_too_long",
+      "label": "LinkedIn connection note over the limit",
+      "applies_to": "linkedin_note",
+      "threshold_chars": 300,
+      "fix": "LinkedIn truncates connection notes at 300 characters. Cut to one specific reason plus the ask."
+    },
+    {
+      "id": "email_too_long",
+      "label": "Cold email over 150 words",
+      "applies_to": "email",
+      "threshold_words": 150,
+      "fix": "Hiring managers read the first three lines. Anything past 150 words is unread."
+    }
+  ]
+}

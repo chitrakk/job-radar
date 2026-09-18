@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { JobDetail, JobEntry } from "../types";
+import type { Settings } from "../lib/settings";
+import { JobActions } from "./JobActions";
 import { formatSalary, relativeDate, seniorityLabel, sourceLabel } from "../lib/format";
 import { shardFor } from "../lib/search";
 
@@ -24,7 +26,15 @@ function loadShard(base: string, id: string): Promise<Record<string, JobDetail>>
   return p;
 }
 
-export function JobCard({ job, dataBase }: { job: JobEntry; dataBase: string }) {
+export function JobCard({
+  job,
+  dataBase,
+  settings,
+}: {
+  job: JobEntry;
+  dataBase: string;
+  settings: Settings;
+}) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -133,14 +143,19 @@ export function JobCard({ job, dataBase }: { job: JobEntry; dataBase: string }) 
         <div className="mt-3 border-t border-line pt-3">
           {loading ? (
             <p className="text-sm text-muted">Loading…</p>
-          ) : detail?.description ? (
-            <p className="max-h-96 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted">
-              {detail.description}
-            </p>
           ) : (
-            <p className="text-sm text-muted">
-              This source did not publish a description. Open the posting to read it.
-            </p>
+            <>
+              {detail?.description ? (
+                <p className="max-h-96 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-muted">
+                  {detail.description}
+                </p>
+              ) : (
+                <p className="text-sm text-muted">
+                  This source did not publish a description. Open the posting to read it.
+                </p>
+              )}
+              <JobActions job={job} description={detail?.description ?? ""} settings={settings} />
+            </>
           )}
         </div>
       )}

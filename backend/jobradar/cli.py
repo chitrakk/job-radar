@@ -18,6 +18,11 @@ from .models import Query
 
 app = typer.Typer(add_completion=False, help="Aggregate job postings into a static corpus.")
 
+# CV scoring, outreach drafting, interview prep and the Sheets tracker.
+from .career.cli import app as career_app  # noqa: E402
+
+app.add_typer(career_app, name="career")
+
 
 def _setup_logging(verbose: bool) -> None:
     logging.basicConfig(

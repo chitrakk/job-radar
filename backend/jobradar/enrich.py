@@ -18,6 +18,7 @@ import httpx
 
 from .llm import available, complete_json
 from .models import Job, Seniority
+from .taxonomy import extract_skills
 from .textutil import detect_seniority
 
 log = logging.getLogger(__name__)
@@ -81,10 +82,14 @@ Include every index exactly once. Postings:
 def _heuristic(job: Job) -> None:
     """Fallback when no LLM is configured or both providers fail.
 
-    Worse than the model, but it means `seniority` is still populated and the UI's level
-    filter still works rather than showing everything as "unknown".
+    Worse than the model, but it keeps the fields search actually depends on populated.
+    Without this, a corpus built with no API key has empty `skills` on every job, and
+    since search matches title/company/skills/tags/summary, three of those five fields
+    being blank made search effectively title-only.
     """
     job.seniority = detect_seniority(job.title, job.description)
+    if not job.skills:
+        job.skills = extract_skills(job.title, job.description)
 
 
 def _render(batch: list[Job]) -> str:
@@ -115,7 +120,8 @@ def _apply(batch: list[Job], payload: object) -> int:
         job = batch[idx]
 
         skills = [str(s).strip() for s in (row.get("skills") or []) if str(s).strip()]
-        job.skills = skills[:8]
+        # Fall back to vocabulary extraction if the model returned none.
+        job.skills = skills[:8] or extract_skills(job.title, job.description)
 
         level = str(row.get("seniority", "")).lower()
         try:

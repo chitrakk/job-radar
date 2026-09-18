@@ -107,8 +107,22 @@ def is_anywhere_remote(location: str, description: str = "") -> bool:
         return False
     if _ANYWHERE.search(location):
         return True
-    # A bare "Remote" with no region, or no location at all, is treated as open.
-    return location.strip().lower() in {"remote", "", "remote worldwide", "fully remote"}
+
+    # A bare "Remote" with no region is genuinely open. An *empty* location is not — it
+    # means we failed to parse one, which is a different thing entirely.
+    #
+    # Treating empty as "anywhere" inverted the whole India filter: records we parsed
+    # correctly got a real location like "San Francisco" and were dropped, while records
+    # we failed to parse had no location and sailed through. Measured on the live corpus,
+    # that made 254 of 273 Hacker News entries — 93% — unparsed junk that outranked the
+    # jobs that had actually been read properly. The filter was selecting for its own
+    # parse failures.
+    normalised = location.strip().lower()
+    if not normalised:
+        # Fall back to the description: "remote, worldwide" in the body is real evidence,
+        # silence is not.
+        return bool(_ANYWHERE.search(description[:800]))
+    return normalised in {"remote", "remote worldwide", "fully remote", "remote - global"}
 
 
 def matches_location(

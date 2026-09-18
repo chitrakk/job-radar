@@ -18,11 +18,13 @@ from typing import Any
 from .config import Config
 from .dedupe import dedupe, tier_summary
 from .fetcher import make_client
-from .models import Job, Query, SourceHealth
+from .models import Job, Query, Seniority, SourceHealth
 from .search import rank, score
 from .sources import load_all
 from .sources.base import build_sources
 from .store import Corpus
+from .taxonomy import extract_skills
+from .textutil import detect_seniority
 
 log = logging.getLogger(__name__)
 
@@ -119,6 +121,16 @@ async def run(
                 keep[job.id] = job
     kept = list(keep.values())
     log.info("relevance filter kept %d", len(kept))
+
+    # Vocabulary-based skill and seniority extraction, always. This is deliberately
+    # outside the LLM path: `skills` is one of the five fields search matches on, and when
+    # it only got populated by enrichment, a corpus built without an API key had it empty
+    # on 100% of jobs — which quietly reduced search to title-and-company only.
+    for job in kept:
+        if not job.skills:
+            job.skills = extract_skills(job.title, job.description)
+        if job.seniority == Seniority.UNKNOWN:
+            job.seniority = detect_seniority(job.title, job.description)
 
     corpus = Corpus(data_dir)
     # Stored postings survive across runs by design, so tightening a filter in queries.yml

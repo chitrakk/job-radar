@@ -166,3 +166,90 @@ def test_prompt_templates_only_use_placeholders_the_callers_supply() -> None:
     # And the real builders must not raise.
     build("cv_score", system="s", criteria="c", jd_block="", cv="cv")
     build("contacts", company="c", title="t", text="x")
+
+
+# --------------------------------------------------------------------------- taxonomy
+
+
+TAXONOMY_SAMPLES = [
+    "Sr. Data Analyst",
+    "Jr Data Scientist",
+    "ML Engineer",
+    "BI Analyst",
+    "Senior SWE",
+    "Engineering Mgr.",
+    "Data Analyst/ Senior Data Analyst",
+    "Financial Data Analyst (SQL, Power BI-DAX)",
+    "data scientist",
+    "machine learning engineer",
+]
+
+
+def test_normalise_is_identical_in_both_languages() -> None:
+    """taxonomy.py and taxonomy.ts both normalise titles before matching. If they disagree,
+    a job ranks differently on the website than in the pipeline that built the corpus —
+    the exact drift the shared JSON is meant to prevent."""
+    from jobradar.taxonomy import normalise
+
+    script = textwrap.dedent(
+        """
+        let raw = ''; process.stdin.on('data', c => raw += c);
+        process.stdin.on('end', () => {
+          const { samples } = JSON.parse(raw);
+          const EXPANSIONS = [
+            [/\\bsr\\b\\.?/g, 'senior'], [/\\bjr\\b\\.?/g, 'junior'],
+            [/\\bmgr\\b\\.?/g, 'manager'], [/\\beng\\b\\.?/g, 'engineer'],
+            [/\\bdev\\b\\.?/g, 'developer'], [/\\bml\\b/g, 'machine learning'],
+            [/\\bai\\b/g, 'artificial intelligence'], [/\\bbi\\b/g, 'business intelligence'],
+            [/\\bds\\b/g, 'data science'], [/\\bswe\\b/g, 'software engineer'],
+            [/\\bsde\\b/g, 'software engineer'], [/\\bpm\\b/g, 'product manager'],
+          ];
+          const out = {};
+          for (const s of samples) {
+            let t = ' ' + s.toLowerCase() + ' ';
+            t = t.replace(/[^a-z0-9+#/&.\\- ]+/g, ' ');
+            for (const [re, repl] of EXPANSIONS) t = t.replace(re, repl);
+            out[s] = t.replace(/\\s+/g, ' ').trim();
+          }
+          process.stdout.write(JSON.stringify(out));
+        });
+        """
+    )
+    js = _node(script, {"samples": TAXONOMY_SAMPLES})
+    for sample in TAXONOMY_SAMPLES:
+        assert normalise(sample) == js[sample], (
+            f"{sample!r}: python={normalise(sample)!r} js={js[sample]!r}"
+        )
+
+
+def test_role_taxonomy_is_well_formed() -> None:
+    """A malformed family would silently stop demoting sibling roles, which is the whole
+    reason the taxonomy exists."""
+    from jobradar.taxonomy import families, taxonomy
+
+    ids = set(families())
+    assert ids, "taxonomy has no families"
+    for fid, fam in families().items():
+        assert fam["canonical"], f"{fid} has no canonical titles"
+        for sibling in fam.get("confused_with", []):
+            assert sibling in ids, f"{fid} points at unknown family {sibling!r}"
+            assert sibling != fid, f"{fid} lists itself as confused_with"
+    assert taxonomy().get("noise_titles"), "no noise titles configured"
+
+
+def test_data_roles_do_not_claim_each_others_canonical_names() -> None:
+    """data_analyst / data_scientist / data_engineer are the pair this whole design is
+    about. If one lists another's canonical title as its own alias, the demotion silently
+    stops working."""
+    from jobradar.taxonomy import families, normalise
+
+    fams = families()
+    trio = ["data_analyst", "data_scientist", "data_engineer"]
+    for fid in trio:
+        mine = {normalise(p) for p in fams[fid]["canonical"]}
+        aliases = {normalise(p) for p in fams[fid]["aliases"]}
+        for other in trio:
+            if other == fid:
+                continue
+            clash = {normalise(p) for p in fams[other]["canonical"]} & (mine | aliases)
+            assert not clash, f"{fid} claims {other}'s canonical title(s): {clash}"

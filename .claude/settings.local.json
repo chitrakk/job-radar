@@ -26,7 +26,19 @@
       "Bash(git add *)",
       "Bash(git -c 'user.name=Chitrak Kumar' -c user.email=chitrakk2020@iimbg.ac.in commit -q -m ' *)",
       "Bash(printf '\\\\n# TypeScript incremental build cache\\\\n*.tsbuildinfo\\\\n')",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(umask 077)",
+      "Bash(chmod 600 /tmp/claude-501/-Users-chitrakkumar-Desktop-Synvesco-Saulikh-Job-Search-AI-agent/1a3b609d-97f9-4176-b4f4-fd3f5e8779a1/scratchpad/.ghtoken)",
+      "Read(//tmp/claude-501/-Users-chitrakkumar-Desktop-Synvesco-Saulikh-Job-Search-AI-agent/1a3b609d-97f9-4176-b4f4-fd3f5e8779a1/scratchpad/**)",
+      "Bash(curl -sS -D /tmp/hdr.txt -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Accept: application/vnd.github+json' https://api.github.com/user)",
+      "Read(//tmp/**)",
+      "Bash(curl -sS -o /dev/null -w '%{http_code}\\\\n' -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://api.github.com/repos/chitrakk/job-radar)",
+      "Bash(curl -sS -X POST -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Accept: application/vnd.github+json' https://api.github.com/user/repos -d '{ *)",
+      "Bash(curl -sS -X POST -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Accept: application/vnd.github+json' https://api.github.com/repos/chitrakk/job-radar/pages -d '{\"build_type\":\"workflow\"}')",
+      "Bash(curl -sS -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://api.github.com/repos/chitrakk/job-radar/actions/runs?per_page=10)",
+      "Bash(curl -sS -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://api.github.com/repos/chitrakk/job-radar/actions/runs/35320228301/jobs)",
+      "Bash(curl -sS -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://api.github.com/repos/chitrakk/job-radar/actions/runs/35320228272/jobs)",
+      "Bash(curl -sS https://chitrakk.github.io/job-radar/data/index.json -o live.json)"
     ]
   }
 }

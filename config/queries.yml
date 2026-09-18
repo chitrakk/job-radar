@@ -19,15 +19,34 @@ defaults:
   strict_location: true
 
 queries:
-  - name: Data & analytics
+  # Kept deliberately wide. These decide what is *available* to search later, so a role
+  # missing here can never be found however good the ranking is — "data engineer" returned
+  # only 3 results purely because nothing was ever collected for it.
+  - name: Data analysis
     keywords:
       [
         data analyst,
         business analyst,
-        data scientist,
+        business intelligence analyst,
         analytics,
-        business intelligence,
+        reporting analyst,
+        product analyst,
       ]
+
+  - name: Data science & ML
+    keywords:
+      [
+        data scientist,
+        data science,
+        machine learning engineer,
+        applied scientist,
+        ai engineer,
+        nlp engineer,
+      ]
+
+  - name: Data engineering
+    keywords:
+      [data engineer, analytics engineer, etl developer, big data engineer]
 
   - name: Product & strategy
     keywords: [product manager, associate product manager, product analyst, strategy]

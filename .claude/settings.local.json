@@ -24,7 +24,9 @@
       "Bash(npm run *)",
       "Bash(rm -rf frontend/public/data)",
       "Bash(git add *)",
-      "Bash(git -c 'user.name=Chitrak Kumar' -c user.email=chitrakk2020@iimbg.ac.in commit -q -m ' *)"
+      "Bash(git -c 'user.name=Chitrak Kumar' -c user.email=chitrakk2020@iimbg.ac.in commit -q -m ' *)",
+      "Bash(printf '\\\\n# TypeScript incremental build cache\\\\n*.tsbuildinfo\\\\n')",
+      "Bash(git rm *)"
     ]
   }
 }

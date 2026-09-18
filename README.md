@@ -63,13 +63,34 @@ defend in an interview.
 | RemoteOK, Remotive, Arbeitnow, Himalayas, WeWorkRemotely | Remote roles open to India |
 | Hacker News "Who is Hiring" | Startup roles that never reach a job board |
 
-### Tier 2 — scraped, best-effort (disabled by default)
+### Tier 2 — scraped with Scrapling, best-effort (disabled by default)
 
-Naukri, Indeed India, Foundit, TimesJobs, Instahyre. **These are expected to fail from
-GitHub Actions**, because Naukri answers datacenter IPs with HTTP 406 and Indeed India runs
-Cloudflare Turnstile. They are built with proxy support wired in — set `JOBRADAR_PROXY_URL`
-to a residential proxy and enable them in `config/sources.yml` to turn them on. Failures
-degrade a run and show in the UI's source-health strip; they never fail the workflow.
+Naukri, Indeed India, Foundit, TimesJobs and Instahyre, via
+[Scrapling](https://github.com/d4vinci/Scrapling)'s `StealthyFetcher` — real browser TLS
+fingerprints, Cloudflare Turnstile solving, and adaptive selectors that survive the layout
+changes these sites ship constantly.
+
+**Expect these to report as blocked in the cloud.** Naukri answers datacenter IPs with
+HTTP 406 and Indeed India runs Turnstile; GitHub Actions runners and every free PaaS are
+datacenter IPs. That is why they ship disabled. They are genuinely useful in two situations:
+
+- **From your own machine** — a residential IP, so run `jobradar pipeline` locally.
+- **With a residential proxy** — set `JOBRADAR_PROXY_URL` and they work in Actions too, with
+  no code change.
+
+To turn them on:
+
+```bash
+cd backend
+uv pip install -e ".[scrape]"   # Scrapling is an optional extra
+uv run scrapling install        # downloads the browser binaries
+# then flip enabled: true for the sources you want in config/sources.yml
+```
+
+Without the extra installed, the module raises ImportError, the loader catches it, and
+Tier 1 carries on untouched. A blocked source degrades a run and shows in the UI's
+source-health strip — it never fails the workflow, and crucially it is never mistaken for
+"this search had no results", because challenge pages are detected before parsing.
 
 > **On India coverage.** Probing ~150 candidate tokens established that Indian-domestic
 > employers mostly do *not* use Greenhouse/Lever/Ashby — they run Darwinbox, Keka, Workday

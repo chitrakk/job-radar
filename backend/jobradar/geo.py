@@ -4,64 +4,78 @@ Needed because job boards write the same place a dozen ways — "Bengaluru", "Ba
 "Bengaluru, Karnataka, India", "BLR", "Bangalore/Hyderabad" — and because a naive
 substring test on "India" misses every posting that only names a city. Without this the
 corpus fills with San Francisco roles that merely matched a keyword.
+
+The vocabulary lives in shared/locations.json because the browser needs exactly the same
+answers. It used to live here alone, and the frontend fell back to a substring test — so
+typing "Gurgaon" on the website matched none of the 41 jobs whose location reads
+"Gurugram", while every worldwide-remote job matched every city anyone typed.
 """
 
 from __future__ import annotations
 
+import json
 import re
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
-# Indian metros and tech hubs, with the spellings boards actually use. Keys are canonical;
-# values are aliases that should resolve to the same city.
-INDIA_CITIES: dict[str, set[str]] = {
-    "bengaluru": {"bengaluru", "bangalore", "blr", "bangaluru", "bengalooru"},
-    "mumbai": {"mumbai", "bombay", "navi mumbai", "thane"},
-    "delhi": {"delhi", "new delhi", "ncr", "delhi ncr"},
-    "gurugram": {"gurugram", "gurgaon"},
-    "noida": {"noida", "greater noida"},
-    "hyderabad": {"hyderabad", "secunderabad", "hyd"},
-    "chennai": {"chennai", "madras"},
-    "pune": {"pune", "poona", "pimpri"},
-    "kolkata": {"kolkata", "calcutta"},
-    "ahmedabad": {"ahmedabad", "gandhinagar"},
-    "jaipur": {"jaipur"},
-    "chandigarh": {"chandigarh", "mohali", "panchkula"},
-    "kochi": {"kochi", "cochin", "ernakulam"},
-    "coimbatore": {"coimbatore"},
-    "indore": {"indore"},
-    "bhubaneswar": {"bhubaneswar"},
-    "thiruvananthapuram": {"thiruvananthapuram", "trivandrum"},
-    "nagpur": {"nagpur"},
-    "lucknow": {"lucknow"},
-    "vadodara": {"vadodara", "baroda"},
-    "surat": {"surat"},
-    "mysuru": {"mysuru", "mysore"},
-    "visakhapatnam": {"visakhapatnam", "vizag"},
-    "patna": {"patna", "bodh gaya", "bodhgaya"},
-    "bhopal": {"bhopal"},
-    "goa": {"goa", "panaji"},
-    "guwahati": {"guwahati"},
-    "raipur": {"raipur"},
-}
 
-_ALIAS_TO_CITY = {alias: city for city, aliases in INDIA_CITIES.items() for alias in aliases}
+def _shared_dir() -> Path:
+    here = Path(__file__).resolve()
+    for candidate in here.parents:
+        if (candidate / "shared" / "locations.json").exists():
+            return candidate / "shared"
+    raise FileNotFoundError("could not locate shared/ directory")
 
-# Words that mean "India" without naming a city.
-INDIA_TERMS = {"india", "indian", "bharat", "in"}
 
-# Phrases meaning the role is open to anyone anywhere — these satisfy an India query.
-_ANYWHERE = re.compile(
-    r"\b(anywhere in the world|worldwide|global|any location"
-    r"|remote\s*[-–]?\s*(global|worldwide|anywhere))\b",
-    re.I,
-)
+@lru_cache(maxsize=1)
+def _vocab() -> dict[str, Any]:
+    return json.loads((_shared_dir() / "locations.json").read_text())
 
-# Explicit region locks that exclude India even though the posting says "remote".
-_REGION_LOCK = re.compile(
-    r"\b(us only|usa only|united states only|u\.s\. only|remote\s*[-–(]*\s*(us|usa|united states|"
-    r"canada|uk|emea|europe|latam|apac[- ]anz|australia)\b|eu only|europe only|uk only|"
-    r"must be (located|based) in (the )?(us|usa|united states|uk|canada|europe))",
-    re.I,
-)
+
+@lru_cache(maxsize=1)
+def _cities() -> dict[str, set[str]]:
+    return {city: set(aliases) for city, aliases in _vocab()["cities"].items()}
+
+
+@lru_cache(maxsize=1)
+def _alias_to_city() -> dict[str, str]:
+    return {alias: city for city, aliases in _cities().items() for alias in aliases}
+
+
+@lru_cache(maxsize=1)
+def _metro_of() -> dict[str, str]:
+    """Which metro area a canonical city belongs to, if any.
+
+    Delhi NCR is one job market: somebody searching "Delhi" wants the Gurugram and Noida
+    postings too, and on the live corpus those are 44 of the 58 NCR jobs. Treating them as
+    different cities hides most of the market from the people who live in it.
+    """
+    return {
+        city: metro
+        for metro, members in _vocab().get("metro_areas", {}).items()
+        for city in members
+    }
+
+
+@lru_cache(maxsize=1)
+def _anywhere() -> re.Pattern[str]:
+    return re.compile(_vocab()["anywhere_pattern"], re.I)
+
+
+@lru_cache(maxsize=1)
+def _region_lock() -> re.Pattern[str]:
+    return re.compile(_vocab()["region_lock_pattern"], re.I)
+
+
+@lru_cache(maxsize=1)
+def _india_terms() -> frozenset[str]:
+    return frozenset(_vocab()["india_terms"])
+
+
+# Kept as a module attribute because callers and tests import it directly.
+INDIA_CITIES: dict[str, set[str]] = _cities()
+INDIA_TERMS: set[str] = set(_india_terms()) | {"in"}
 
 _WORD = re.compile(r"[a-z]+")
 
@@ -73,15 +87,32 @@ def _tokens(text: str) -> set[str]:
 def canonical_city(location: str) -> str | None:
     """Return the canonical Indian city named in `location`, if any."""
     low = location.lower()
-    for alias, city in _ALIAS_TO_CITY.items():
+    tokens = _tokens(low)
+    best: str | None = None
+    best_len = 0
+    for alias, city in _alias_to_city().items():
         # Multi-word aliases need a substring test; single words use token equality so
-        # that "in" inside "Indiana" or "Berlin" does not match.
-        if " " in alias:
-            if alias in low:
-                return city
-        elif alias in _tokens(low):
-            return city
-    return None
+        # that "in" inside "Indiana" or "Berlin" does not match. Longest alias wins, so
+        # "greater noida" resolves before "noida" and "navi mumbai" before "mumbai".
+        hit = alias in low if " " in alias else alias in tokens
+        if hit and len(alias) > best_len:
+            best, best_len = city, len(alias)
+    return best
+
+
+def metro_area(city: str | None) -> str | None:
+    """The wider job market a city sits in, e.g. Gurugram -> delhi."""
+    return _metro_of().get(city) if city else None
+
+
+def same_metro(a: str | None, b: str | None) -> bool:
+    """Two cities a commuter would treat as one market."""
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    ma, mb = metro_area(a), metro_area(b)
+    return bool(ma and ma == mb)
 
 
 def is_india(location: str) -> bool:
@@ -91,7 +122,7 @@ def is_india(location: str) -> bool:
         return True
     toks = _tokens(location)
     # "IN" alone is ambiguous ("Bloomington, IN" is Indiana), so require the full word.
-    return bool(toks & (INDIA_TERMS - {"in"}))
+    return bool(toks & _india_terms())
 
 
 def is_anywhere_remote(location: str, description: str = "") -> bool:
@@ -103,9 +134,9 @@ def is_anywhere_remote(location: str, description: str = "") -> bool:
     description is still used for the *negative* test, because an explicit "US only" there
     is a genuine signal.
     """
-    if _REGION_LOCK.search(f"{location} {description[:800]}"):
+    if _region_lock().search(f"{location} {description[:800]}"):
         return False
-    if _ANYWHERE.search(location):
+    if _anywhere().search(location):
         return True
 
     # A bare "Remote" with no region is genuinely open. An *empty* location is not — it
@@ -121,8 +152,48 @@ def is_anywhere_remote(location: str, description: str = "") -> bool:
     if not normalised:
         # Fall back to the description: "remote, worldwide" in the body is real evidence,
         # silence is not.
-        return bool(_ANYWHERE.search(description[:800]))
+        return bool(_anywhere().search(description[:800]))
     return normalised in {"remote", "remote worldwide", "fully remote", "remote - global"}
+
+
+def locality(
+    job_location: str,
+    query_location: str,
+    *,
+    is_remote: bool = False,
+    description: str = "",
+) -> str:
+    """How a posting satisfies a location query: "exact", "metro", "region", "remote" or "".
+
+    Callers that only need a yes/no use matches_location(). Ranking needs the distinction,
+    because "a remote job you could do from Delhi" and "a job in Delhi" are both matches
+    and only one of them is what somebody typing "Delhi" was looking for.
+    """
+    if not query_location:
+        return "exact"
+
+    q = query_location.strip().lower()
+    remote_ok = "remote" if (is_remote and is_anywhere_remote(job_location, description)) else ""
+
+    if q in INDIA_TERMS or q == "india":
+        return "region" if is_india(job_location) else remote_ok
+
+    city = canonical_city(q)
+    if city:
+        job_city = canonical_city(job_location)
+        if job_city == city:
+            return "exact"
+        if same_metro(job_city, city):
+            return "metro"
+        # "India" with no city named still plausibly serves a city query.
+        if is_india(job_location) and not job_city:
+            return "region"
+        return remote_ok
+
+    # Non-Indian query location: plain token overlap.
+    if _tokens(q) & _tokens(job_location):
+        return "exact"
+    return remote_ok
 
 
 def matches_location(
@@ -137,28 +208,6 @@ def matches_location(
     A remote role open worldwide satisfies an India query — that is usually the best
     outcome for an India-based candidate, not a near miss.
     """
-    if not query_location:
-        return True
-
-    q = query_location.strip().lower()
-
-    if q in INDIA_TERMS or q == "india":
-        if is_india(job_location):
-            return True
-        return is_remote and is_anywhere_remote(job_location, description)
-
-    # A specific city: match the city itself, or any India-wide/remote posting.
-    city = canonical_city(q)
-    if city:
-        job_city = canonical_city(job_location)
-        if job_city == city:
-            return True
-        # "India" with no city, or a worldwide-remote role, still plausibly serves the query.
-        if is_india(job_location) and not job_city:
-            return True
-        return is_remote and is_anywhere_remote(job_location, description)
-
-    # Non-Indian query location: plain token overlap.
-    return bool(_tokens(q) & _tokens(job_location)) or (
-        is_remote and is_anywhere_remote(job_location, description)
+    return bool(
+        locality(job_location, query_location, is_remote=is_remote, description=description)
     )

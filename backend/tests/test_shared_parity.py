@@ -253,3 +253,106 @@ def test_data_roles_do_not_claim_each_others_canonical_names() -> None:
                 continue
             clash = {normalise(p) for p in fams[other]["canonical"]} & (mine | aliases)
             assert not clash, f"{fid} claims {other}'s canonical title(s): {clash}"
+
+
+# --------------------------------------------------------------------------- geo
+
+
+ESBUILD = shared_dir().parent / "frontend" / "node_modules" / ".bin" / "esbuild"
+
+# Locations in the spellings Indian boards actually use, plus the traps: a remote role
+# region-locked away from India, an American state abbreviation that reads like "India",
+# and a city whose alias is a substring of another word.
+GEO_SAMPLES: list[tuple[str, str, bool]] = [
+    ("Gurugram, Haryana, India", "Delhi", False),
+    ("Gurugram, Haryana, India", "Gurgaon", False),
+    ("Noida, Uttar Pradesh, India", "Delhi NCR", False),
+    ("Bengaluru East, Karnataka, India", "Bangalore", False),
+    ("Mumbai, Maharashtra, India", "Bombay", False),
+    ("Bengaluru, Karnataka, India", "Delhi", False),
+    ("Bloomington, IN", "India", False),
+    ("Anywhere in the World", "Delhi", True),
+    ("REMOTE (US/Canada/UK)", "India", True),
+    ("Remote", "India", True),
+    ("", "India", True),
+    ("San Francisco, CA", "India", False),
+    ("Pune/Pimpri-Chinchwad Area", "Pune", False),
+    ("Greater Noida", "Noida", False),
+    ("Navi Mumbai", "Mumbai", False),
+    ("Hyderabad, Telangana, India", "India", False),
+]
+
+
+@pytest.mark.skipif(not ESBUILD.exists(), reason="frontend deps not installed")
+def test_geo_gives_the_same_answers_in_both_languages(tmp_path) -> None:
+    """The browser must agree with the pipeline about where a job is.
+
+    This is checked against the real frontend/src/lib/geo.ts rather than a transcription
+    of it, because the bug it guards against was precisely that the browser had no geo
+    module: it did a substring test, so "Gurgaon" matched none of the 41 Gurugram jobs and
+    every worldwide-remote posting matched every city anybody typed.
+    """
+    from jobradar.geo import locality
+
+    bundle = tmp_path / "geo.mjs"
+    build = subprocess.run(
+        [
+            str(ESBUILD),
+            "--bundle",
+            "--format=esm",
+            "--platform=node",
+            "--loader:.json=json",
+            f"--outfile={bundle}",
+            str(shared_dir().parent / "frontend" / "src" / "lib" / "geo.ts"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if build.returncode != 0:
+        pytest.fail(f"esbuild failed: {build.stderr[-800:]}")
+
+    script = textwrap.dedent(
+        f"""
+        import {{ locality }} from '{bundle}';
+        let raw = ''; process.stdin.on('data', c => raw += c);
+        process.stdin.on('end', () => {{
+          const {{ samples }} = JSON.parse(raw);
+          process.stdout.write(JSON.stringify(
+            samples.map(([job, query, isRemote]) => locality(job, query, {{ isRemote }}))
+          ));
+        }});
+        """
+    )
+    result = subprocess.run(
+        ["node", "--input-type=module", "-e", script],
+        input=json.dumps({"samples": [list(s) for s in GEO_SAMPLES]}),
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if result.returncode != 0:
+        pytest.fail(f"node failed: {result.stderr[-800:]}")
+    js = json.loads(result.stdout)
+
+    for (job_loc, query_loc, is_remote), got in zip(GEO_SAMPLES, js, strict=True):
+        want = locality(job_loc, query_loc, is_remote=is_remote)
+        assert want == got, (
+            f"{job_loc!r} vs {query_loc!r} (remote={is_remote}): python={want!r} js={got!r}"
+        )
+
+
+def test_locations_json_is_well_formed() -> None:
+    import re as _re
+
+    vocab = json.loads((shared_dir() / "locations.json").read_text())
+    for city, aliases in vocab["cities"].items():
+        assert city in aliases, f"{city} is not among its own aliases"
+        assert all(a == a.lower() for a in aliases), f"{city} has a non-lowercase alias"
+    # A metro area may only name cities the vocabulary knows.
+    for metro, members in vocab.get("metro_areas", {}).items():
+        for member in members:
+            assert member in vocab["cities"], f"metro {metro} names unknown city {member!r}"
+    # Both regexes must compile in Python; the JS side is covered by the parity test above.
+    _re.compile(vocab["anywhere_pattern"])
+    _re.compile(vocab["region_lock_pattern"])

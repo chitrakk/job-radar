@@ -20,11 +20,15 @@ from selectolax.parser import HTMLParser
 
 from ..fetcher import Blocked, fetch_text
 from ..models import Job, Query, Tier
-from ..textutil import detect_remote
+from ..textutil import detect_remote, html_to_text, parse_salary
 from .base import Source, register
 
 SEARCH = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+POSTING = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
 PAGE_SIZE = 25
+
+# The numeric posting id at the end of /jobs/view/<slug>-<id>.
+_JOB_ID = re.compile(r"(\d{6,})(?:/)?$")
 
 
 def _clean_url(href: str) -> str:
@@ -58,6 +62,9 @@ class LinkedInGuestSource(Source):
     # Deliberately slow. This is the source most likely to start 429ing, and backing off
     # here is cheaper than losing it entirely.
     min_interval = 4.0
+    # The search endpoint returns titles only, so descriptions come from a second request
+    # per posting. See hydrate().
+    needs_hydration = True
 
     async def search(self, client: httpx.AsyncClient, query: Query) -> list[Job]:
         max_pages = int(self.config.get("max_pages", 3))
@@ -97,6 +104,62 @@ class LinkedInGuestSource(Source):
                 if len(batch) < PAGE_SIZE:
                     break
         return jobs
+
+    async def hydrate(self, client: httpx.AsyncClient, job: Job) -> bool:
+        """Fetch one posting's public detail page for its description.
+
+        Uses the same guest endpoint LinkedIn's own logged-out job pages call — no
+        cookies, no account. This is a second request per posting against the source most
+        likely to rate-limit us, so the pipeline caps how many run and a failure here is
+        never fatal: the posting keeps its title and link and simply stays thin.
+        """
+        m = _JOB_ID.search(job.url)
+        if not m:
+            return False
+
+        html = await fetch_text(
+            client,
+            POSTING.format(job_id=m.group(1)),
+            min_interval=self.hydrate_interval,
+            retries=0,
+            headers={"Accept": "text/html"},
+        )
+        tree = HTMLParser(html)
+        body = tree.css_first(".show-more-less-html__markup, .description__text")
+        if not body:
+            return False
+
+        text = html_to_text(body.html or "")
+        if len(text) < 80:
+            return False
+        job.description = text
+
+        # The criteria list carries the employment details LinkedIn does not put in the
+        # prose — seniority especially, which is more reliable than reading it off a title.
+        for item in tree.css(".description__job-criteria-item"):
+            header = item.css_first(".description__job-criteria-subheader")
+            value = item.css_first(".description__job-criteria-text")
+            if not (header and value):
+                continue
+            label = header.text(strip=True).lower()
+            if "employment type" in label or "job function" in label:
+                tag = value.text(strip=True)
+                if tag and tag not in job.tags:
+                    job.tags.append(tag)
+
+        if job.salary_max is None:
+            pay = parse_salary(text)
+            if pay.get("salary_max"):
+                job.salary_min = pay.get("salary_min")
+                job.salary_max = pay.get("salary_max")
+                job.salary_currency = pay.get("salary_currency", "")
+        job.remote = detect_remote(job.location, job.title, text[:2000])
+        return True
+
+    @property
+    def hydrate_interval(self) -> float:
+        """Detail requests are cheaper than search pages, but still paced."""
+        return float(self.config.get("hydrate_interval", 1.2))
 
     def _parse(self, html: str) -> list[Job]:
         tree = HTMLParser(html)

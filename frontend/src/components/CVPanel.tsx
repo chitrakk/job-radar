@@ -47,11 +47,13 @@ export function CVPanel({
   onChange,
   jobDescription,
   targetRole,
+  onClearTarget,
 }: {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   jobDescription?: string;
   targetRole?: string;
+  onClearTarget?: () => void;
 }) {
   const [report, setReport] = useState<CVReport | null>(null);
   const [busy, setBusy] = useState(false);
@@ -120,7 +122,22 @@ export function CVPanel({
         >
           {busy ? "Scoring…" : jobDescription ? "Score against this job" : "Score my CV"}
         </button>
-        {targetRole && <span className="text-sm text-muted">Target: {targetRole}</span>}
+        {targetRole ? (
+          <span className="text-sm text-muted">
+            Target: <span className="text-ink">{targetRole}</span>
+            {!jobDescription && " (this posting has no description, so keyword alignment is a guess)"}
+            {onClearTarget && (
+              <button onClick={onClearTarget} className="ml-2 text-accent hover:underline">
+                clear
+              </button>
+            )}
+          </span>
+        ) : (
+          <span className="text-sm text-muted">
+            Scoring in general. Open a job and pick “Score my CV for this” to grade against
+            a real posting.
+          </span>
+        )}
       </div>
 
       {error && (

@@ -54,6 +54,10 @@ export default function App() {
   const [shown, setShown] = useState(PAGE_SIZE);
   const [view, setView] = useState<"jobs" | "cv" | "settings">("jobs");
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  // Which posting the CV is being scored against. CVPanel always supported this, but
+  // nothing passed it — so the keyword-alignment criterion, 18 of the 100 points, was
+  // being judged against an empty string for every user.
+  const [cvTarget, setCvTarget] = useState<{ role: string; description: string } | null>(null);
 
   function patchSettings(p: Partial<Settings>) {
     setSettings((s) => {
@@ -96,7 +100,11 @@ export default function App() {
     setShown(PAGE_SIZE);
   }, [filters]);
 
-  const results = useMemo(() => (jobs ? applyFilters(jobs, filters) : []), [jobs, filters]);
+  const search = useMemo(
+    () => (jobs ? applyFilters(jobs, filters) : { jobs: [], relaxed: false, strongCount: 0 }),
+    [jobs, filters],
+  );
+  const results = search.jobs;
 
   function patch(p: Partial<Filters>) {
     setFilters((f) => ({ ...f, ...p }));
@@ -156,7 +164,15 @@ export default function App() {
           />
         )}
 
-        {view === "cv" && <CVPanel settings={settings} onChange={patchSettings} />}
+        {view === "cv" && (
+          <CVPanel
+            settings={settings}
+            onChange={patchSettings}
+            jobDescription={cvTarget?.description}
+            targetRole={cvTarget?.role}
+            onClearTarget={() => setCvTarget(null)}
+          />
+        )}
 
         {view === "jobs" && (
           <>
@@ -177,6 +193,19 @@ export default function App() {
           </div>
         )}
 
+        {/* A quiet fallback that returns worse matches without saying so is how a search
+            loses trust. If the bar had to come down, say it came down. */}
+        {jobs && search.relaxed && (
+          <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+            <p className="text-ink">
+              {search.strongCount === 0
+                ? "Nothing matches this closely."
+                : `Only ${search.strongCount} close ${search.strongCount === 1 ? "match" : "matches"}.`}{" "}
+              Showing near misses too — widen the location or drop a filter for better ones.
+            </p>
+          </div>
+        )}
+
         {jobs && results.length === 0 && (
           <div className="rounded-xl border border-line bg-surface p-8 text-center">
             <p className="font-medium text-ink">No jobs match these filters.</p>
@@ -188,7 +217,16 @@ export default function App() {
 
         <div className="space-y-3">
           {results.slice(0, shown).map((job) => (
-            <JobCard key={job.id} job={job} dataBase={DATA_BASE} settings={settings} />
+            <JobCard
+              key={job.id}
+              job={job}
+              dataBase={DATA_BASE}
+              settings={settings}
+              onScoreCV={(role, description) => {
+                setCvTarget({ role, description });
+                setView("cv");
+              }}
+            />
           ))}
         </div>
 

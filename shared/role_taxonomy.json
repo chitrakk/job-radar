@@ -1,147 +1,389 @@
 {
   "version": 1,
   "note": "Role families for query understanding. The problem this solves: 'data analyst' and 'data scientist' and 'data engineer' share the word 'data', so plain term matching ranks all three identically. Each family carries the titles that mean the same job, the skills that corroborate it, and the sibling families it is most often confused with — so a search for one can actively demote the others instead of just failing to prefer its own.",
-
   "families": [
     {
       "id": "data_analyst",
       "label": "Data / Business Analyst",
-      "canonical": ["data analyst", "business analyst", "analytics analyst"],
+      "canonical": [
+        "data analyst",
+        "business analyst",
+        "analytics analyst"
+      ],
       "aliases": [
-        "bi analyst", "business intelligence analyst", "reporting analyst",
-        "insights analyst", "analytics specialist", "data analytics",
-        "business intelligence developer", "bi developer", "mis executive",
-        "mis analyst", "reporting specialist", "decision scientist",
-        "product analyst", "operations analyst", "business analytics"
+        "bi analyst",
+        "business intelligence analyst",
+        "reporting analyst",
+        "insights analyst",
+        "analytics specialist",
+        "data analytics",
+        "business intelligence developer",
+        "bi developer",
+        "mis executive",
+        "mis analyst",
+        "reporting specialist",
+        "decision scientist",
+        "product analyst",
+        "operations analyst",
+        "business analytics"
       ],
       "skills": [
-        "sql", "excel", "power bi", "powerbi", "tableau", "looker", "dashboards",
-        "dax", "google analytics", "reporting", "visualisation", "visualization",
-        "etl", "pivot", "qlik", "metabase", "superset"
+        "sql",
+        "excel",
+        "power bi",
+        "powerbi",
+        "tableau",
+        "looker",
+        "dashboards",
+        "dax",
+        "google analytics",
+        "reporting",
+        "visualisation",
+        "visualization",
+        "etl",
+        "pivot",
+        "qlik",
+        "metabase",
+        "superset"
       ],
-      "confused_with": ["data_scientist", "data_engineer", "software_engineer"]
+      "confused_with": [
+        "data_scientist",
+        "data_engineer",
+        "software_engineer"
+      ]
     },
     {
       "id": "data_scientist",
       "label": "Data Scientist",
-      "canonical": ["data scientist", "data science"],
+      "canonical": [
+        "data scientist",
+        "data science"
+      ],
       "aliases": [
-        "machine learning scientist", "ml scientist", "applied scientist",
-        "research scientist", "applied machine learning", "quantitative analyst",
-        "quant researcher", "statistician", "decision science"
+        "machine learning scientist",
+        "ml scientist",
+        "applied scientist",
+        "research scientist",
+        "applied machine learning",
+        "quantitative analyst",
+        "quant researcher",
+        "statistician",
+        "decision science"
       ],
       "skills": [
-        "python", "r", "machine learning", "statistics", "statistical modelling",
-        "statistical modeling", "scikit", "sklearn", "pytorch", "tensorflow",
-        "regression", "classification", "clustering", "nlp", "forecasting",
-        "a/b testing", "experimentation", "causal inference", "pandas", "numpy"
+        "python",
+        "r",
+        "machine learning",
+        "statistics",
+        "statistical modelling",
+        "statistical modeling",
+        "scikit",
+        "sklearn",
+        "pytorch",
+        "tensorflow",
+        "regression",
+        "classification",
+        "clustering",
+        "nlp",
+        "forecasting",
+        "a/b testing",
+        "experimentation",
+        "causal inference",
+        "pandas",
+        "numpy"
       ],
-      "confused_with": ["data_analyst", "ml_engineer", "data_engineer"]
+      "confused_with": [
+        "data_analyst",
+        "ml_engineer",
+        "data_engineer"
+      ]
     },
     {
       "id": "data_engineer",
       "label": "Data Engineer",
-      "canonical": ["data engineer", "data engineering"],
+      "canonical": [
+        "data engineer",
+        "data engineering"
+      ],
       "aliases": [
-        "analytics engineer", "etl developer", "data platform engineer",
-        "big data engineer", "data warehouse engineer", "data infrastructure"
+        "analytics engineer",
+        "etl developer",
+        "data platform engineer",
+        "big data engineer",
+        "data warehouse engineer",
+        "data infrastructure"
       ],
       "skills": [
-        "spark", "airflow", "kafka", "dbt", "snowflake", "databricks", "hadoop",
-        "redshift", "bigquery", "data pipeline", "etl", "elt", "scala"
+        "spark",
+        "airflow",
+        "kafka",
+        "dbt",
+        "snowflake",
+        "databricks",
+        "hadoop",
+        "redshift",
+        "bigquery",
+        "data pipeline",
+        "etl",
+        "elt",
+        "scala"
       ],
-      "confused_with": ["data_scientist", "data_analyst", "software_engineer"]
+      "confused_with": [
+        "data_scientist",
+        "data_analyst",
+        "software_engineer"
+      ]
     },
     {
       "id": "ml_engineer",
       "label": "ML / AI Engineer",
-      "canonical": ["machine learning engineer", "ml engineer", "ai engineer"],
+      "canonical": [
+        "machine learning engineer",
+        "ml engineer",
+        "ai engineer"
+      ],
       "aliases": [
-        "mlops engineer", "deep learning engineer", "computer vision engineer",
-        "nlp engineer", "applied ai", "ai/ml engineer", "genai engineer",
+        "mlops engineer",
+        "deep learning engineer",
+        "computer vision engineer",
+        "nlp engineer",
+        "applied ai",
+        "ai/ml engineer",
+        "genai engineer",
         "llm engineer"
       ],
       "skills": [
-        "pytorch", "tensorflow", "mlops", "model serving", "kubeflow", "llm",
-        "transformers", "hugging face", "cuda", "inference", "fine-tuning",
-        "vector database", "rag"
+        "pytorch",
+        "tensorflow",
+        "mlops",
+        "model serving",
+        "kubeflow",
+        "llm",
+        "transformers",
+        "hugging face",
+        "cuda",
+        "inference",
+        "fine-tuning",
+        "vector database",
+        "rag"
       ],
-      "confused_with": ["data_scientist", "data_engineer", "software_engineer"]
+      "confused_with": [
+        "data_scientist",
+        "data_engineer",
+        "software_engineer"
+      ]
     },
     {
       "id": "software_engineer",
       "label": "Software Engineer",
-      "canonical": ["software engineer", "software developer", "sde"],
+      "canonical": [
+        "software engineer",
+        "software developer",
+        "sde"
+      ],
       "aliases": [
-        "backend engineer", "frontend engineer", "full stack developer",
-        "fullstack engineer", "web developer", "application developer",
-        "platform engineer", "python developer", "java developer",
-        "golang developer", "node developer", "swe"
+        "backend engineer",
+        "frontend engineer",
+        "full stack developer",
+        "fullstack engineer",
+        "web developer",
+        "application developer",
+        "platform engineer",
+        "python developer",
+        "java developer",
+        "golang developer",
+        "node developer",
+        "swe"
       ],
       "skills": [
-        "java", "golang", "javascript", "typescript", "react", "node", "spring",
-        "microservices", "rest api", "docker", "kubernetes", "aws", "git"
+        "java",
+        "golang",
+        "javascript",
+        "typescript",
+        "react",
+        "node",
+        "spring",
+        "microservices",
+        "rest api",
+        "docker",
+        "kubernetes",
+        "aws",
+        "git"
       ],
-      "confused_with": ["data_engineer", "ml_engineer"]
+      "confused_with": [
+        "data_engineer",
+        "ml_engineer"
+      ]
     },
     {
       "id": "product_manager",
       "label": "Product Manager",
-      "canonical": ["product manager", "product management"],
+      "canonical": [
+        "product manager",
+        "product management"
+      ],
       "aliases": [
-        "associate product manager", "apm", "technical product manager",
-        "group product manager", "product owner", "senior product manager"
+        "associate product manager",
+        "apm",
+        "technical product manager",
+        "group product manager",
+        "product owner",
+        "senior product manager"
       ],
       "skills": [
-        "roadmap", "user research", "prd", "stakeholder", "prioritisation",
-        "prioritization", "go-to-market", "product strategy", "a/b testing"
+        "roadmap",
+        "user research",
+        "prd",
+        "stakeholder",
+        "prioritisation",
+        "prioritization",
+        "go-to-market",
+        "product strategy",
+        "a/b testing"
       ],
-      "confused_with": ["data_analyst", "project_manager"]
+      "confused_with": [
+        "data_analyst",
+        "project_manager"
+      ]
     },
     {
       "id": "project_manager",
       "label": "Project / Program Manager",
-      "canonical": ["project manager", "program manager", "programme manager"],
-      "aliases": ["delivery manager", "scrum master", "engagement manager", "pmo"],
-      "skills": ["agile", "scrum", "jira", "stakeholder", "gantt", "delivery"],
-      "confused_with": ["product_manager"]
+      "canonical": [
+        "project manager",
+        "program manager",
+        "programme manager"
+      ],
+      "aliases": [
+        "delivery manager",
+        "scrum master",
+        "engagement manager",
+        "pmo"
+      ],
+      "skills": [
+        "agile",
+        "scrum",
+        "jira",
+        "stakeholder",
+        "gantt",
+        "delivery"
+      ],
+      "confused_with": [
+        "product_manager"
+      ]
     },
     {
       "id": "finance",
       "label": "Finance",
-      "canonical": ["financial analyst", "finance analyst"],
+      "canonical": [
+        "financial analyst",
+        "finance analyst"
+      ],
       "aliases": [
-        "investment banking", "equity research", "corporate finance", "fp&a",
-        "financial planning", "credit analyst", "treasury analyst", "controller"
+        "investment banking",
+        "equity research",
+        "corporate finance",
+        "fp&a",
+        "financial planning",
+        "credit analyst",
+        "treasury analyst",
+        "controller"
       ],
       "skills": [
-        "financial modelling", "financial modeling", "valuation", "dcf", "excel",
-        "ifrs", "gaap", "budgeting", "forecasting", "variance analysis"
+        "financial modelling",
+        "financial modeling",
+        "valuation",
+        "dcf",
+        "excel",
+        "ifrs",
+        "gaap",
+        "budgeting",
+        "forecasting",
+        "variance analysis"
       ],
-      "confused_with": ["data_analyst"]
+      "confused_with": [
+        "data_analyst"
+      ]
     },
     {
       "id": "consulting",
       "label": "Consulting / Strategy",
-      "canonical": ["consultant", "strategy consultant", "management consultant"],
-      "aliases": [
-        "business consultant", "strategy analyst", "associate consultant",
-        "corporate strategy", "business strategy"
+      "canonical": [
+        "consultant",
+        "strategy consultant",
+        "management consultant"
       ],
-      "skills": ["market research", "due diligence", "benchmarking", "case study"],
-      "confused_with": ["data_analyst", "product_manager"]
+      "aliases": [
+        "business consultant",
+        "strategy analyst",
+        "associate consultant",
+        "corporate strategy",
+        "business strategy"
+      ],
+      "skills": [
+        "market research",
+        "due diligence",
+        "benchmarking",
+        "case study"
+      ],
+      "confused_with": [
+        "data_analyst",
+        "product_manager"
+      ]
     }
   ],
-
+  "seniority_order": [
+    "intern",
+    "entry",
+    "mid",
+    "senior",
+    "lead",
+    "exec"
+  ],
   "seniority_terms": {
-    "intern": ["intern", "internship", "trainee", "apprentice"],
-    "entry": ["junior", "jr", "entry level", "fresher", "graduate", "associate", "i"],
-    "mid": ["mid", "ii"],
-    "senior": ["senior", "sr", "iii", "iv"],
-    "lead": ["lead", "principal", "staff", "architect", "manager", "head"],
-    "exec": ["director", "vp", "vice president", "chief", "cto", "ceo", "cfo"]
+    "intern": [
+      "intern",
+      "internship",
+      "trainee",
+      "apprentice"
+    ],
+    "entry": [
+      "junior",
+      "jr",
+      "entry level",
+      "fresher",
+      "graduate",
+      "associate",
+      "i"
+    ],
+    "mid": [
+      "mid",
+      "ii"
+    ],
+    "senior": [
+      "senior",
+      "sr",
+      "iii",
+      "iv"
+    ],
+    "lead": [
+      "lead",
+      "principal",
+      "staff",
+      "architect",
+      "manager",
+      "head"
+    ],
+    "exec": [
+      "director",
+      "vp",
+      "vice president",
+      "chief",
+      "cto",
+      "ceo",
+      "cfo"
+    ]
   },
-
   "noise_titles": [
     "see posting",
     "multiple roles",

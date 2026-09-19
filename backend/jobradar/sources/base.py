@@ -44,9 +44,25 @@ class Source(abc.ABC):
     def __init__(self, config: dict | None = None) -> None:
         self.config = config or {}
 
+    # True when this source's list endpoint returns titles without descriptions, so the
+    # pipeline should call `hydrate` on the postings it keeps.
+    needs_hydration: bool = False
+
     @abc.abstractmethod
     async def search(self, client: httpx.AsyncClient, query: Query) -> list[Job]:
         """Return postings matching `query`. May raise; `run` handles it."""
+
+    async def hydrate(self, client: httpx.AsyncClient, job: Job) -> bool:
+        """Fill in a posting's description from its own page. Return True if it changed.
+
+        Most sources return the description in the list response and need none of this.
+        Those that do not — LinkedIn's guest search is titles only — leave every posting
+        with an empty body, which silently disables far more than the Details panel:
+        skills extraction, skill search, interview prep and CV keyword alignment all read
+        the description. On the live corpus that was 242 of 557 jobs, and essentially
+        every India-based one.
+        """
+        return False
 
     async def run(self, client: httpx.AsyncClient, query: Query) -> tuple[list[Job], SourceHealth]:
         started = time.monotonic()

@@ -27,15 +27,22 @@ import math
 import re
 from datetime import UTC, datetime
 
-from .geo import matches_location
+from .geo import locality, matches_location
 from .models import Job, Query, RemoteKind
-from .taxonomy import Intent, is_noise_title, normalise, understand
+from .taxonomy import Intent, is_noise_title, normalise, seniority_distance, understand
 
 # Tier scores. The gaps are deliberately wide: a title match should never be overtaken by
 # an accumulation of body matches, which is exactly how bag-of-words ranking goes wrong.
 T_EXACT_PHRASE = 1.00
 T_ALIAS = 0.82
 T_ALL_TERMS = 0.70
+# Every query term is in the job's own text, just not in its title. Without a tier here a
+# one-word skill search could not match anything at all: "tableau" resolves to no role
+# family, so there are no skills to corroborate with, and a single body hit scored exactly
+# W_BODY_TERM — which the guard below then rejected as noise. On the live corpus
+# "tableau", "statistics", "excel" and "pandas" each returned nothing and "sql" returned
+# one result, in an index where those are the most frequently listed skills.
+T_BODY_ALL_TERMS = 0.44
 T_PARTIAL = 0.34
 T_BODY_ONLY = 0.16
 
@@ -57,6 +64,16 @@ RIVAL_PENALTY = 0.35
 # Titles with no information ("See posting") are suppressed rather than dropped, so a
 # corpus made only of them still returns something.
 NOISE_PENALTY = 0.15
+
+# Per rung of the seniority ladder between what the query asked for and what is offered.
+# Without this, "entry level data scientist" and "principal data scientist" were the same
+# search, both led by Sr and Principal roles.
+SENIORITY_STEP_PENALTY = 0.20
+MAX_SENIORITY_PENALTY = 0.62
+
+# How much the *kind* of location match matters once a posting has passed the filter. A
+# worldwide-remote role satisfies "Delhi", but somebody who typed Delhi wants Delhi.
+LOCALITY_WEIGHT = {"exact": 1.25, "metro": 1.18, "region": 1.00, "remote": 0.78, "": 0.0}
 
 _WORD = re.compile(r"[a-z0-9+#.]+")
 
@@ -137,6 +154,16 @@ def _is_rival(title_norm: str, intent: Intent) -> bool:
     return any(rival and rival in title_norm for rival in intent.rivals)
 
 
+def _seniority_fit(job: Job, intent: Intent) -> float:
+    """Multiplier for offering a different experience level than the query asked for."""
+    if not intent.seniority:
+        return 1.0
+    distance = seniority_distance(intent.seniority, str(job.seniority))
+    if not distance:
+        return 1.0
+    return 1.0 - min(MAX_SENIORITY_PENALTY, distance * SENIORITY_STEP_PENALTY)
+
+
 def score(job: Job, query: Query, intent: Intent | None = None) -> float:
     """Relevance of one job to one query, in roughly 0..1.3."""
     intent = intent or understand(query.as_text())
@@ -152,11 +179,15 @@ def score(job: Job, query: Query, intent: Intent | None = None) -> float:
     corroboration = _corroboration(job, intent, haystack)
 
     if tier == 0.0:
-        # Nothing in the title. Only worth surfacing if the body genuinely matches, and
-        # even then it ranks below any title match.
-        if corroboration <= W_BODY_TERM:
+        # Nothing in the title. Every term appearing in the job's own text is still a real
+        # match — that is how a skill search like "tableau" finds anything at all.
+        hay_tokens = set(haystack.split())
+        if intent.terms and all(t in hay_tokens for t in intent.terms):
+            base = T_BODY_ALL_TERMS + corroboration
+        elif corroboration > W_BODY_TERM:
+            base = T_BODY_ONLY + corroboration
+        else:
             return 0.0
-        base = T_BODY_ONLY + corroboration
     else:
         base = tier + corroboration + W_TITLE_FOCUS * _title_focus(title_norm, intent)
 
@@ -169,21 +200,21 @@ def score(job: Job, query: Query, intent: Intent | None = None) -> float:
     if is_noise_title(job.title):
         base *= NOISE_PENALTY
 
+    base *= _seniority_fit(job, intent)
+
     # Freshness matters but must not reorder relevance tiers, so it is a gentle multiplier.
     s = base * (0.70 + 0.30 * recency_boost(job))
 
     if query.location:
-        if matches_location(
+        where = locality(
             job.location,
             query.location,
             is_remote=job.remote == RemoteKind.REMOTE,
             description=job.description,
-        ):
-            s *= 1.25
-        elif job.remote == RemoteKind.REMOTE:
-            s *= 0.95
-        else:
-            s *= 0.55
+        )
+        # A job in the city beats one in the metro beats one merely in the country beats a
+        # worldwide-remote role that matches whatever anybody types.
+        s *= LOCALITY_WEIGHT[where] if where else 0.55
 
     if query.remote_only and job.remote != RemoteKind.REMOTE:
         s *= 0.2

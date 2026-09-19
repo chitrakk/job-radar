@@ -30,10 +30,12 @@ export function JobCard({
   job,
   dataBase,
   settings,
+  onScoreCV,
 }: {
   job: JobEntry;
   dataBase: string;
   settings: Settings;
+  onScoreCV?: (role: string, description: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<JobDetail | null>(null);
@@ -154,7 +156,12 @@ export function JobCard({
                   This source did not publish a description. Open the posting to read it.
                 </p>
               )}
-              <JobActions job={job} description={detail?.description ?? ""} settings={settings} />
+              <JobActions
+                job={job}
+                description={detail?.description ?? ""}
+                settings={settings}
+                onScoreCV={onScoreCV}
+              />
             </>
           )}
         </div>

@@ -44,6 +44,47 @@ def noise_titles() -> frozenset[str]:
     return frozenset(t.lower() for t in taxonomy().get("noise_titles", []))
 
 
+@lru_cache(maxsize=1)
+def seniority_order() -> list[str]:
+    return list(taxonomy().get("seniority_order", []))
+
+
+@lru_cache(maxsize=1)
+def _seniority_phrases() -> list[tuple[str, str]]:
+    """(normalised phrase, level), longest first so "entry level" beats "entry"."""
+    pairs = [
+        (normalise(term), level)
+        for level, terms in taxonomy().get("seniority_terms", {}).items()
+        for term in terms
+        # Roman-numeral and single-letter markers are grade suffixes on a title, not
+        # something anybody types into a search box, and "i" would fire on every query.
+        if len(term) > 2
+    ]
+    return sorted(pairs, key=lambda kv: -len(kv[0]))
+
+
+def detect_query_seniority(query_norm: str) -> str:
+    """The experience level a query asks for, or "" when it asks for none.
+
+    Without this, "entry level data scientist", "junior data scientist" and "data
+    scientist" were the same search: all three returned the identical 27 results led by
+    Sr and Principal roles, because the seniority word matched no title and was simply
+    carried along as dead weight in the term list.
+    """
+    for phrase, level in _seniority_phrases():
+        if re.search(rf"(?<![a-z0-9]){re.escape(phrase)}(?![a-z0-9])", query_norm):
+            return level
+    return ""
+
+
+def seniority_distance(asked: str, offered: str) -> int:
+    """How many rungs apart two levels are on the ladder, or 0 when either is unknown."""
+    order = seniority_order()
+    if asked not in order or offered not in order:
+        return 0
+    return abs(order.index(asked) - order.index(offered))
+
+
 def normalise(text: str) -> str:
     """Lowercase, expand the abbreviations these titles are riddled with, collapse space."""
     t = f" {text.lower()} "
@@ -83,6 +124,8 @@ class Intent:
     # Canonical phrases of sibling families — a title matching one of these is probably a
     # different job, however many query words it happens to contain.
     rivals: list[str] = field(default_factory=list)
+    # The experience level the query asked for, "" when it asked for none.
+    seniority: str = ""
 
     @property
     def has_family(self) -> bool:
@@ -110,7 +153,12 @@ def detect_family(query_norm: str) -> str:
 def understand(query: str) -> Intent:
     """Turn a free-text query into an Intent."""
     norm = normalise(query)
-    intent = Intent(raw=query, normalised=norm, terms=[t for t in norm.split() if len(t) > 1])
+    intent = Intent(
+        raw=query,
+        normalised=norm,
+        terms=[t for t in norm.split() if len(t) > 1],
+        seniority=detect_query_seniority(norm),
+    )
 
     fid = detect_family(norm)
     if not fid:

@@ -65,10 +65,12 @@ export function JobActions({
   job,
   description,
   settings,
+  onScoreCV,
 }: {
   job: JobEntry;
   description: string;
   settings: Settings;
+  onScoreCV?: (role: string, description: string) => void;
 }) {
   const [tab, setTab] = useState<"" | "outreach" | "interview">("");
   const [draft, setDraft] = useState<OutreachDraft | null>(null);
@@ -131,6 +133,14 @@ export function JobActions({
         <button onClick={() => run("interview")} className={BTN} disabled={busy}>
           {busy && tab === "interview" ? "Preparing…" : "Interview prep"}
         </button>
+        {onScoreCV && (
+          <button
+            onClick={() => onScoreCV(`${job.title} at ${job.company}`, description)}
+            className={BTN}
+          >
+            Score my CV for this
+          </button>
+        )}
         <button onClick={track} className={BTN}>
           Save to tracker
         </button>

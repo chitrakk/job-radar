@@ -17,7 +17,7 @@ from typing import Any
 
 from .config import Config
 from .dedupe import dedupe, tier_summary
-from .fetcher import make_client
+from .fetcher import Blocked, make_client
 from .models import Job, Query, Seniority, SourceHealth
 from .search import rank, score
 from .sources import load_all
@@ -91,6 +91,45 @@ async def collect(
     return all_jobs, list(health_by_source.values())
 
 
+async def hydrate(
+    jobs: list[Job], options: dict[str, Any], *, skip_ids: set[str], limit: int
+) -> int:
+    """Fetch descriptions for postings whose source only returned a title.
+
+    Runs after the relevance filter so we only spend requests on jobs that will actually
+    be published, and skips anything already stored with a description so a posting is
+    fetched once in its life rather than once every four hours.
+
+    `limit` is a hard budget across all sources. LinkedIn is the source most likely to
+    start rate-limiting, and one thin description is a much smaller problem than losing
+    the source, so this is capped rather than exhaustive and failures are swallowed.
+    """
+    sources = {s.name: s for s in build_sources(options) if s.needs_hydration}
+    if not sources or limit <= 0:
+        return 0
+
+    pending = [
+        j for j in jobs if j.source in sources and len(j.description) < 80 and j.id not in skip_ids
+    ][:limit]
+    if not pending:
+        return 0
+
+    log.info("hydrating %d postings that arrived without a description", len(pending))
+    filled = 0
+    async with make_client() as client:
+        for job in pending:
+            try:
+                if await sources[job.source].hydrate(client, job):
+                    filled += 1
+            except Blocked:
+                log.warning("hydration blocked by %s; stopping early", job.source)
+                break
+            except Exception as exc:  # noqa: BLE001 - a thin posting is not a failed run
+                log.debug("hydrate %s failed: %s", job.url, exc)
+    log.info("hydrated %d of %d", filled, len(pending))
+    return filled
+
+
 async def run(
     data_dir: Path,
     *,
@@ -122,6 +161,28 @@ async def run(
     kept = list(keep.values())
     log.info("relevance filter kept %d", len(kept))
 
+    corpus = Corpus(data_dir)
+    # Stored postings survive across runs by design, so tightening a filter in queries.yml
+    # would otherwise leave the jobs it was meant to exclude sitting in the corpus until
+    # they aged out. --rebuild discards the old corpus and re-derives it from this run.
+    existing = {} if rebuild else corpus.load()
+
+    # Pull descriptions for sources that only hand back titles. This has to happen before
+    # skill extraction and enrichment, both of which read the description.
+    if not dry_run:
+        already = {jid for jid, job in existing.items() if len(job.description) >= 80}
+        await hydrate(
+            kept,
+            cfg.source_options(),
+            skip_ids=already,
+            limit=int((cfg.queries_raw.get("defaults", {}) or {}).get("hydrate_limit", 300)),
+        )
+        # Carry forward descriptions fetched on an earlier run rather than refetching.
+        for job in kept:
+            if len(job.description) < 80 and (prior := existing.get(job.id)):
+                if len(prior.description) >= 80:
+                    job.description = prior.description
+
     # Vocabulary-based skill and seniority extraction, always. This is deliberately
     # outside the LLM path: `skills` is one of the five fields search matches on, and when
     # it only got populated by enrichment, a corpus built without an API key had it empty
@@ -131,12 +192,6 @@ async def run(
             job.skills = extract_skills(job.title, job.description)
         if job.seniority == Seniority.UNKNOWN:
             job.seniority = detect_seniority(job.title, job.description)
-
-    corpus = Corpus(data_dir)
-    # Stored postings survive across runs by design, so tightening a filter in queries.yml
-    # would otherwise leave the jobs it was meant to exclude sitting in the corpus until
-    # they aged out. --rebuild discards the old corpus and re-derives it from this run.
-    existing = {} if rebuild else corpus.load()
 
     if use_llm:
         # Imported lazily so phase 1 runs with no LLM dependency installed or configured.

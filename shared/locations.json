@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "note": "India-aware location vocabulary, read by BOTH backend/jobradar/geo.py and frontend/src/lib/geo.ts. It lived only in Python, so the browser fell back to raw substring matching and a search for 'Gurgaon' returned zero of the 41 jobs in Gurugram. Regexes are written in the dialect both Python's re and JavaScript's RegExp accept; tests/test_shared_parity.py runs them through Node and compares.",
+
+  "india_terms": ["india", "indian", "bharat"],
+
+  "cities": {
+    "bengaluru": ["bengaluru", "bangalore", "blr", "bangaluru", "bengalooru"],
+    "mumbai": ["mumbai", "bombay", "navi mumbai", "thane"],
+    "delhi": ["delhi", "new delhi", "ncr", "delhi ncr", "national capital region"],
+    "gurugram": ["gurugram", "gurgaon"],
+    "noida": ["noida", "greater noida"],
+    "ghaziabad": ["ghaziabad"],
+    "faridabad": ["faridabad"],
+    "hyderabad": ["hyderabad", "secunderabad", "hyd"],
+    "chennai": ["chennai", "madras"],
+    "pune": ["pune", "poona", "pimpri", "pimpri-chinchwad"],
+    "kolkata": ["kolkata", "calcutta"],
+    "ahmedabad": ["ahmedabad", "gandhinagar"],
+    "jaipur": ["jaipur"],
+    "chandigarh": ["chandigarh", "mohali", "panchkula"],
+    "kochi": ["kochi", "cochin", "ernakulam"],
+    "coimbatore": ["coimbatore"],
+    "indore": ["indore"],
+    "bhubaneswar": ["bhubaneswar"],
+    "thiruvananthapuram": ["thiruvananthapuram", "trivandrum"],
+    "nagpur": ["nagpur"],
+    "lucknow": ["lucknow"],
+    "vadodara": ["vadodara", "baroda"],
+    "surat": ["surat"],
+    "mysuru": ["mysuru", "mysore"],
+    "visakhapatnam": ["visakhapatnam", "vizag"],
+    "patna": ["patna", "bodh gaya", "bodhgaya"],
+    "bhopal": ["bhopal"],
+    "goa": ["goa", "panaji"],
+    "guwahati": ["guwahati"],
+    "raipur": ["raipur"]
+  },
+
+  "metro_areas": {
+    "delhi": ["delhi", "gurugram", "noida", "ghaziabad", "faridabad"],
+    "mumbai": ["mumbai"],
+    "bengaluru": ["bengaluru"]
+  },
+
+  "anywhere_pattern": "\\b(anywhere in the world|worldwide|global|any location|remote\\s*[-–]?\\s*(global|worldwide|anywhere))\\b",
+
+  "region_lock_pattern": "\\b(us only|usa only|united states only|u\\.s\\. only|remote\\s*[-–(]*\\s*(us|usa|united states|canada|uk|emea|europe|latam|apac[- ]anz|australia)\\b|eu only|europe only|uk only|must be (located|based) in (the )?(us|usa|united states|uk|canada|europe))"
+}

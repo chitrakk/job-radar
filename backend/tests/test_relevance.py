@@ -21,9 +21,11 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from jobradar.models import Job, Query
+from jobradar.geo import matches_location
+from jobradar.models import Job, Query, RemoteKind
 from jobradar.search import rank, score
 from jobradar.taxonomy import detect_family, is_noise_title, normalise, understand
+from jobradar.textutil import detect_seniority
 
 NOW = datetime.now(UTC)
 
@@ -251,6 +253,95 @@ def test_location_filter_still_applies_on_top_of_relevance() -> None:
 def test_empty_query_keeps_everything_scoreable() -> None:
     out = rank(list(CORPUS), q(""), min_score=0.0)
     assert len(out) == len(CORPUS)
+
+
+# --------------------------------------------------------------- seniority in the query
+
+
+def test_query_seniority_is_detected() -> None:
+    assert understand("entry level data scientist").seniority == "entry"
+    assert understand("junior data scientist").seniority == "entry"
+    assert understand("fresher data scientist").seniority == "entry"
+    assert understand("principal data scientist").seniority == "lead"
+    assert understand("data scientist").seniority == ""
+    # "i" and "ii" are title grade markers, not something anyone searches for; if they
+    # counted, every query containing the letter would resolve to entry level.
+    assert understand("data scientist").seniority == ""
+
+
+@pytest.mark.parametrize(
+    ("query", "should_win", "should_lose"),
+    [
+        # The case that sent a career-changer to the Principal roles: all three of these
+        # used to return an identical ranking led by "Sr Data Scientist".
+        ("junior data scientist", "Data Scientist", "Senior Data Scientist"),
+        ("entry level data analyst", "Data Analyst", "Senior Data Analyst"),
+        ("senior data analyst", "Senior Data Analyst", "Data Analyst"),
+    ],
+)
+def test_query_seniority_reorders_results(query: str, should_win: str, should_lose: str) -> None:
+    by_title = {j.title: j for j in CORPUS}
+    for job in CORPUS:
+        job.seniority = detect_seniority(job.title, job.description)
+    query_obj, intent = q(query), understand(query)
+    win = score(by_title[should_win], query_obj, intent)
+    lose = score(by_title[should_lose], query_obj, intent)
+    assert win > lose, f"{should_win} ({win}) should beat {should_lose} ({lose}) for {query!r}"
+
+
+# ------------------------------------------------------------------- skill-only queries
+
+
+@pytest.mark.parametrize("skill", ["tableau", "power bi", "airflow", "pytorch"])
+def test_a_bare_skill_query_finds_the_jobs_listing_it(skill: str) -> None:
+    """A one-word skill search used to return nothing at all.
+
+    With no role family there are no skills to corroborate with, so a single body hit
+    scored exactly W_BODY_TERM — and the guard rejected anything scoring that or less.
+    Measured live: "tableau", "statistics", "excel" and "pandas" each returned 0 results
+    and "sql" returned 1, in a corpus where those are the commonest listed skills.
+    """
+    jobs = [
+        make("Data Analyst", company="Has", desc=f"You will use {skill} every day."),
+        make("Data Analyst", company="HasNot", desc="You will use nothing relevant."),
+    ]
+    out = rank(jobs, q(skill), min_score=0.02)
+    assert [j.company for j in out] == ["Has"], [j.title for j in out]
+
+
+# ------------------------------------------------------------------------ location rank
+
+
+def test_a_local_job_outranks_a_worldwide_remote_one() -> None:
+    """Someone who typed "Delhi" wants Delhi.
+
+    A worldwide-remote posting satisfies every location anybody types, so without ranking
+    the kind of match, searching Delhi returned 111 jobs led by a Video Editor in
+    "Anywhere in the World" — with 9 of the 111 actually near Delhi.
+    """
+    local = make("Data Scientist", company="Local", location="Gurugram, Haryana, India")
+    metro = make("Data Scientist", company="Metro", location="Noida, Uttar Pradesh, India")
+    far = make("Data Scientist", company="Far", location="Bengaluru, Karnataka, India")
+    anywhere = make("Data Scientist", company="Anywhere", location="Anywhere in the World")
+    anywhere.remote = RemoteKind.REMOTE
+
+    query_obj = q("data scientist", location="Delhi", strict_location=True)
+    out = rank([anywhere, far, metro, local], query_obj, min_score=0.0)
+    ordered = [j.company for j in out]
+    assert ordered[0] in {"Local", "Metro"}, ordered
+    assert ordered.index("Anywhere") > ordered.index("Local"), ordered
+    # Bengaluru is in India but is not Delhi, and is not a metro neighbour either.
+    assert "Far" not in ordered, ordered
+
+
+def test_ncr_is_one_market() -> None:
+    """Gurugram and Noida jobs must answer a Delhi search — they are 44 of the 58 NCR
+    postings in the live corpus, so excluding them hides most of the market."""
+    for city in ("Gurugram, Haryana, India", "Noida, Uttar Pradesh, India", "Ghaziabad"):
+        assert matches_location(city, "Delhi"), city
+    assert matches_location("Delhi, India", "Gurgaon")
+    # Still not everything: a different metro is a different job.
+    assert not matches_location("Bengaluru, Karnataka, India", "Delhi")
 
 
 def test_scores_stay_in_a_sane_range() -> None:

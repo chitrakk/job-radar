@@ -125,11 +125,14 @@ export function CVPanel({
         {targetRole ? (
           <span className="text-sm text-muted">
             Target: <span className="text-ink">{targetRole}</span>
-            {!jobDescription && " (this posting has no description, so keyword alignment is a guess)"}
+            {!jobDescription && " — this posting has no description, so keyword alignment is a guess"}
             {onClearTarget && (
-              <button onClick={onClearTarget} className="ml-2 text-accent hover:underline">
-                clear
-              </button>
+              <>
+                {" · "}
+                <button onClick={onClearTarget} className="text-accent hover:underline">
+                  clear
+                </button>
+              </>
             )}
           </span>
         ) : (

@@ -1,0 +1,52 @@
+name: Probe source blocking
+
+# Which job boards will actually talk to a GitHub Actions runner?
+#
+# Run this by hand before turning a Tier 2 source on. It answers the only question that
+# matters for them: a runner is a datacenter IP, and Indian job boards treat those very
+# differently from a home connection. Measured from a residential IP, a real browser
+# unlocks Indeed, TimesJobs, IIMJobs, Internshala, Instahyre, Shine and Wellfound — while
+# Naukri and Foundit block headless Chromium *harder* than a plain request. None of that
+# tells you what happens from Azure, which is what this workflow finds out.
+#
+# It writes nothing and changes nothing; read the summary and set config/sources.yml
+# accordingly.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Probe
+        run: node scripts/probe_blocks.mjs 2>&1 | tee probe.txt
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo '## Source reachability from a GitHub Actions runner'
+            echo
+            echo 'Runner egress IP:' "$(curl -s --max-time 10 https://api.ipify.org || echo unknown)"
+            echo
+            echo '```'
+            cat probe.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

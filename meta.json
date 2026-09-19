@@ -1,0 +1,24 @@
+{
+ "updated_at": "2026-09-19T18:22:32.869128+00:00",
+ "total_jobs": 553,
+ "sources_ok": 14,
+ "sources_failed": 0,
+ "by_source": {
+  "linkedin": 245,
+  "ats:greenhouse": 130,
+  "weworkremotely": 50,
+  "ats:ashby": 45,
+  "remoteok": 33,
+  "ats:lever": 20,
+  "hn_hiring": 18,
+  "himalayas": 4,
+  "remotive": 4,
+  "ats:smartrecruiters": 3,
+  "arbeitnow": 1
+ },
+ "enriched": 0,
+ "tiers": {
+  "tier1": 553,
+  "tier2": 0
+ }
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Filters, JobEntry, Meta, SourceHealth } from "./types";
 import { EMPTY_FILTERS } from "./types";
 import { applyFilters } from "./lib/search";
+import { parseCorpus } from "./lib/corpus";
 import { FilterBar } from "./components/FilterBar";
 import { JobCard } from "./components/JobCard";
 import { SourceHealthBar } from "./components/SourceHealthBar";
@@ -50,6 +51,7 @@ export default function App() {
   const [health, setHealth] = useState<SourceHealth[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dropped, setDropped] = useState(0);
   const [filters, setFilters] = useState<Filters>(filtersFromUrl);
   const [shown, setShown] = useState(PAGE_SIZE);
   const [view, setView] = useState<"jobs" | "cv" | "settings">("jobs");
@@ -81,9 +83,17 @@ export default function App() {
           fetch(`${DATA_BASE}meta.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
         ]);
         if (cancelled) return;
-        setJobs(idx);
-        setHealth(hl);
-        setMeta(mt);
+        // Never hand the UI a record straight off the wire: a scraper that starts
+        // emitting nulls should cost us those rows, not blank the whole page.
+        const parsed = parseCorpus(idx);
+        if (!Array.isArray(idx)) throw new Error("index.json is not a list of jobs");
+        if (parsed.dropped) {
+          console.warn(`dropped ${parsed.dropped} unusable job records`);
+        }
+        setJobs(parsed.jobs);
+        setDropped(parsed.dropped);
+        setHealth(Array.isArray(hl) ? hl : []);
+        setMeta(mt && typeof mt === "object" ? (mt as Meta) : null);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       }
@@ -190,6 +200,15 @@ export default function App() {
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-28 animate-pulse rounded-xl border border-line bg-surface" />
             ))}
+          </div>
+        )}
+
+        {/* A damaged index is worth admitting: it means a scraper is returning junk, and
+            the counts on this page are lower than the source actually published. */}
+        {dropped > 0 && (
+          <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-muted">
+            {dropped.toLocaleString("en-IN")} listing{dropped === 1 ? "" : "s"} in the last
+            refresh were unreadable and have been left out.
           </div>
         )}
 

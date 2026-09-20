@@ -32,6 +32,33 @@ for (const [metro, members] of Object.entries(METRO_AREAS)) {
   for (const city of members) METRO_OF.set(city, metro);
 }
 
+const STATE_ALIASES = new Map<string, string>();
+for (const [state, aliases] of Object.entries((vocab.states ?? {}) as Record<string, string[]>)) {
+  for (const alias of aliases) STATE_ALIASES.set(alias, state);
+}
+const CITY_STATE = (vocab.city_state ?? {}) as Record<string, string>;
+
+/** Every Indian state named in a location string. */
+export function statesIn(location: string): Set<string> {
+  const low = location.toLowerCase();
+  const out = new Set<string>();
+  for (const [alias, state] of STATE_ALIASES) if (low.includes(alias)) out.add(state);
+  return out;
+}
+
+/**
+ * The states a city query can legitimately be satisfied by — including the rest of its
+ * metro area, since Delhi NCR spans three of them and a posting saying only "Haryana"
+ * may well be in Gurugram.
+ */
+export function statesFor(city: string): Set<string> {
+  const metro = METRO_OF.get(city);
+  const members = metro ? (METRO_AREAS[metro] ?? [city]) : [city];
+  const out = new Set<string>();
+  for (const c of members) if (CITY_STATE[c]) out.add(CITY_STATE[c]);
+  return out;
+}
+
 function tokens(text: string): Set<string> {
   return new Set(text.toLowerCase().match(/[a-z]+/g) ?? []);
 }
@@ -120,7 +147,18 @@ export function locality(
     const jobCities = citiesIn(jobLocation);
     if (jobCities.has(city)) return "exact";
     for (const c of jobCities) if (sameMetro(c, city)) return "metro";
-    if (isIndia(jobLocation) && jobCities.size === 0) return "region";
+    if (jobCities.size === 0) {
+      // A posting naming a *state* and no city is not "somewhere in India": Maharashtra
+      // is not Delhi. 104 of the 125 state-only postings in the live corpus said
+      // "Maharashtra", and answered searches for every city alike.
+      const jobStates = statesIn(jobLocation);
+      if (jobStates.size) {
+        const allowed = statesFor(city);
+        for (const s of jobStates) if (allowed.has(s)) return "region";
+        return remoteOk;
+      }
+      if (isIndia(jobLocation)) return "region";
+    }
     return remoteOk;
   }
 

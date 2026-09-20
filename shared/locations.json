@@ -1,49 +1,255 @@
 {
   "version": 1,
-  "note": "India-aware location vocabulary, read by BOTH backend/jobradar/geo.py and frontend/src/lib/geo.ts. It lived only in Python, so the browser fell back to raw substring matching and a search for 'Gurgaon' returned zero of the 41 jobs in Gurugram. Regexes are written in the dialect both Python's re and JavaScript's RegExp accept; tests/test_shared_parity.py runs them through Node and compares.",
-
-  "india_terms": ["india", "indian", "bharat"],
-
+  "note": "India-aware location vocabulary, read by BOTH backend/jobradar/geo.py and frontend/src/lib/geo.ts. It lived only in Python, so the browser fell back to raw substring matching and a search for 'Gurgaon' returned zero of the 41 jobs in Gurugram. `states` exists because 125 postings name a state and no city: without it 'Maharashtra, India' counted as 'somewhere in India' and so answered a Delhi search. Regexes are written in the dialect both Python's re and JavaScript's RegExp accept; tests/test_shared_parity.py runs them through Node.",
+  "india_terms": [
+    "india",
+    "indian",
+    "bharat"
+  ],
   "cities": {
-    "bengaluru": ["bengaluru", "bangalore", "blr", "bangaluru", "bengalooru"],
-    "mumbai": ["mumbai", "bombay", "navi mumbai", "thane"],
-    "delhi": ["delhi", "new delhi", "ncr", "delhi ncr", "national capital region"],
-    "gurugram": ["gurugram", "gurgaon"],
-    "noida": ["noida", "greater noida"],
-    "ghaziabad": ["ghaziabad"],
-    "faridabad": ["faridabad"],
-    "hyderabad": ["hyderabad", "secunderabad", "hyd"],
-    "chennai": ["chennai", "madras"],
-    "pune": ["pune", "poona", "pimpri", "pimpri-chinchwad"],
-    "kolkata": ["kolkata", "calcutta"],
-    "ahmedabad": ["ahmedabad", "gandhinagar"],
-    "jaipur": ["jaipur"],
-    "chandigarh": ["chandigarh", "mohali", "panchkula"],
-    "kochi": ["kochi", "cochin", "ernakulam"],
-    "coimbatore": ["coimbatore"],
-    "indore": ["indore"],
-    "bhubaneswar": ["bhubaneswar"],
-    "thiruvananthapuram": ["thiruvananthapuram", "trivandrum"],
-    "nagpur": ["nagpur"],
-    "lucknow": ["lucknow"],
-    "vadodara": ["vadodara", "baroda"],
-    "surat": ["surat"],
-    "mysuru": ["mysuru", "mysore"],
-    "visakhapatnam": ["visakhapatnam", "vizag"],
-    "patna": ["patna", "bodh gaya", "bodhgaya"],
-    "bhopal": ["bhopal"],
-    "goa": ["goa", "panaji"],
-    "guwahati": ["guwahati"],
-    "raipur": ["raipur"]
+    "bengaluru": [
+      "bengaluru",
+      "bangalore",
+      "blr",
+      "bangaluru",
+      "bengalooru"
+    ],
+    "mumbai": [
+      "mumbai",
+      "bombay",
+      "navi mumbai",
+      "thane"
+    ],
+    "delhi": [
+      "delhi",
+      "new delhi",
+      "ncr",
+      "delhi ncr",
+      "national capital region"
+    ],
+    "gurugram": [
+      "gurugram",
+      "gurgaon"
+    ],
+    "noida": [
+      "noida",
+      "greater noida"
+    ],
+    "ghaziabad": [
+      "ghaziabad"
+    ],
+    "faridabad": [
+      "faridabad"
+    ],
+    "hyderabad": [
+      "hyderabad",
+      "secunderabad",
+      "hyd"
+    ],
+    "chennai": [
+      "chennai",
+      "madras"
+    ],
+    "pune": [
+      "pune",
+      "poona",
+      "pimpri",
+      "pimpri-chinchwad"
+    ],
+    "kolkata": [
+      "kolkata",
+      "calcutta"
+    ],
+    "ahmedabad": [
+      "ahmedabad",
+      "gandhinagar"
+    ],
+    "jaipur": [
+      "jaipur"
+    ],
+    "chandigarh": [
+      "chandigarh",
+      "mohali",
+      "panchkula"
+    ],
+    "kochi": [
+      "kochi",
+      "cochin",
+      "ernakulam"
+    ],
+    "coimbatore": [
+      "coimbatore"
+    ],
+    "indore": [
+      "indore"
+    ],
+    "bhubaneswar": [
+      "bhubaneswar"
+    ],
+    "thiruvananthapuram": [
+      "thiruvananthapuram",
+      "trivandrum"
+    ],
+    "nagpur": [
+      "nagpur"
+    ],
+    "lucknow": [
+      "lucknow"
+    ],
+    "vadodara": [
+      "vadodara",
+      "baroda"
+    ],
+    "surat": [
+      "surat"
+    ],
+    "mysuru": [
+      "mysuru",
+      "mysore"
+    ],
+    "visakhapatnam": [
+      "visakhapatnam",
+      "vizag"
+    ],
+    "patna": [
+      "patna",
+      "bodh gaya",
+      "bodhgaya"
+    ],
+    "bhopal": [
+      "bhopal"
+    ],
+    "goa": [
+      "goa",
+      "panaji"
+    ],
+    "guwahati": [
+      "guwahati"
+    ],
+    "raipur": [
+      "raipur"
+    ]
   },
-
   "metro_areas": {
-    "delhi": ["delhi", "gurugram", "noida", "ghaziabad", "faridabad"],
-    "mumbai": ["mumbai"],
-    "bengaluru": ["bengaluru"]
+    "delhi": [
+      "delhi",
+      "gurugram",
+      "noida",
+      "ghaziabad",
+      "faridabad"
+    ],
+    "mumbai": [
+      "mumbai"
+    ],
+    "bengaluru": [
+      "bengaluru"
+    ]
   },
-
   "anywhere_pattern": "\\b(anywhere in the world|worldwide|global|any location|remote\\s*[-–]?\\s*(global|worldwide|anywhere))\\b",
-
-  "region_lock_pattern": "\\b(us only|usa only|united states only|u\\.s\\. only|remote\\s*[-–(]*\\s*(us|usa|united states|canada|uk|emea|europe|latam|apac[- ]anz|australia)\\b|eu only|europe only|uk only|must be (located|based) in (the )?(us|usa|united states|uk|canada|europe))"
+  "region_lock_pattern": "\\b(us only|usa only|united states only|u\\.s\\. only|remote\\s*[-–(]*\\s*(us|usa|united states|canada|uk|emea|europe|latam|apac[- ]anz|australia)\\b|eu only|europe only|uk only|must be (located|based) in (the )?(us|usa|united states|uk|canada|europe))",
+  "states": {
+    "maharashtra": [
+      "maharashtra"
+    ],
+    "karnataka": [
+      "karnataka"
+    ],
+    "tamil nadu": [
+      "tamil nadu",
+      "tamilnadu"
+    ],
+    "telangana": [
+      "telangana"
+    ],
+    "uttar pradesh": [
+      "uttar pradesh"
+    ],
+    "haryana": [
+      "haryana"
+    ],
+    "west bengal": [
+      "west bengal"
+    ],
+    "gujarat": [
+      "gujarat"
+    ],
+    "rajasthan": [
+      "rajasthan"
+    ],
+    "kerala": [
+      "kerala"
+    ],
+    "punjab": [
+      "punjab"
+    ],
+    "bihar": [
+      "bihar"
+    ],
+    "odisha": [
+      "odisha",
+      "orissa"
+    ],
+    "madhya pradesh": [
+      "madhya pradesh"
+    ],
+    "andhra pradesh": [
+      "andhra pradesh"
+    ],
+    "assam": [
+      "assam"
+    ],
+    "jharkhand": [
+      "jharkhand"
+    ],
+    "chhattisgarh": [
+      "chhattisgarh"
+    ],
+    "uttarakhand": [
+      "uttarakhand"
+    ],
+    "himachal pradesh": [
+      "himachal pradesh"
+    ],
+    "goa": [
+      "goa"
+    ],
+    "delhi": [
+      "delhi"
+    ],
+    "chandigarh": [
+      "chandigarh"
+    ]
+  },
+  "city_state": {
+    "bengaluru": "karnataka",
+    "mysuru": "karnataka",
+    "mumbai": "maharashtra",
+    "pune": "maharashtra",
+    "nagpur": "maharashtra",
+    "delhi": "delhi",
+    "gurugram": "haryana",
+    "faridabad": "haryana",
+    "noida": "uttar pradesh",
+    "ghaziabad": "uttar pradesh",
+    "lucknow": "uttar pradesh",
+    "hyderabad": "telangana",
+    "chennai": "tamil nadu",
+    "coimbatore": "tamil nadu",
+    "kolkata": "west bengal",
+    "ahmedabad": "gujarat",
+    "vadodara": "gujarat",
+    "surat": "gujarat",
+    "jaipur": "rajasthan",
+    "chandigarh": "chandigarh",
+    "kochi": "kerala",
+    "thiruvananthapuram": "kerala",
+    "indore": "madhya pradesh",
+    "bhopal": "madhya pradesh",
+    "bhubaneswar": "odisha",
+    "visakhapatnam": "andhra pradesh",
+    "patna": "bihar",
+    "goa": "goa",
+    "guwahati": "assam",
+    "raipur": "chhattisgarh"
+  }
 }

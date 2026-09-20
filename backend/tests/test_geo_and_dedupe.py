@@ -169,3 +169,49 @@ def test_remote_kind_is_preserved_through_merge() -> None:
         _job("Data Analyst", "Acme", source="ats:lever", remote=RemoteKind.REMOTE),
     ]
     assert dedupe(jobs)[0].remote == RemoteKind.REMOTE
+
+
+# --------------------------------------------------------------------- state-only places
+
+
+def test_a_state_only_posting_is_not_everywhere_in_india() -> None:
+    """The stress test found "AkzoNobel — Maharashtra, India" in the top ten for Delhi,
+    Gurgaon, Bengaluru *and* Hyderabad. A posting that names a state and no city was
+    being treated as pan-India; 104 of the 125 state-only postings in the live corpus
+    said "Maharashtra"."""
+    from jobradar.geo import matches_location
+
+    assert not matches_location("Maharashtra, India", "Delhi")
+    assert not matches_location("Maharashtra, India", "Bengaluru")
+    assert not matches_location("Kerala, India", "Hyderabad")
+    # ...but it still answers a search for a city that is in that state.
+    assert matches_location("Maharashtra, India", "Mumbai")
+    assert matches_location("Maharashtra, India", "Pune")
+    assert matches_location("Karnataka, India", "Bangalore")
+
+
+def test_ncr_spans_three_states_so_they_all_answer_delhi() -> None:
+    """Gurugram is in Haryana and Noida in Uttar Pradesh. A posting that says only
+    "Haryana" may well be the Gurugram office, so it stays eligible for Delhi."""
+    from jobradar.geo import matches_location, states_for
+
+    assert states_for("delhi") == {"delhi", "haryana", "uttar pradesh"}
+    assert matches_location("Haryana, India", "Delhi")
+    assert matches_location("Uttar Pradesh, India", "Gurgaon")
+
+
+def test_a_genuinely_pan_india_posting_still_matches_any_city() -> None:
+    from jobradar.geo import matches_location
+
+    for place in ("All India", "India", "Pan India"):
+        assert matches_location(place, "Delhi"), place
+        assert matches_location(place, "Bengaluru"), place
+
+
+def test_state_only_postings_rank_below_a_real_local_match() -> None:
+    from jobradar.geo import locality
+
+    assert locality("Gurugram, Haryana, India", "Delhi") == "metro"
+    assert locality("New Delhi, Delhi, India", "Delhi") == "exact"
+    assert locality("Haryana, India", "Delhi") == "region"
+    assert locality("Maharashtra, India", "Delhi") == ""

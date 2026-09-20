@@ -59,6 +59,34 @@ def _metro_of() -> dict[str, str]:
 
 
 @lru_cache(maxsize=1)
+def _state_aliases() -> dict[str, str]:
+    return {
+        alias: state for state, aliases in _vocab().get("states", {}).items() for alias in aliases
+    }
+
+
+@lru_cache(maxsize=1)
+def _city_state() -> dict[str, str]:
+    return dict(_vocab().get("city_state", {}))
+
+
+def states_in(location: str) -> set[str]:
+    """Every Indian state named in a location string."""
+    low = location.lower()
+    return {state for alias, state in _state_aliases().items() if alias in low}
+
+
+def states_for(city: str) -> set[str]:
+    """The states a city query can legitimately be satisfied by.
+
+    Includes the states of the city's whole metro area, because Delhi NCR spans three of
+    them: a posting that says only "Haryana" may well be in Gurugram.
+    """
+    members = _vocab().get("metro_areas", {}).get(metro_area(city) or "", [city])
+    return {_city_state()[c] for c in members if c in _city_state()}
+
+
+@lru_cache(maxsize=1)
 def _anywhere() -> re.Pattern[str]:
     return re.compile(_vocab()["anywhere_pattern"], re.I)
 
@@ -204,9 +232,17 @@ def locality(
             return "exact"
         if any(same_metro(c, city) for c in job_cities):
             return "metro"
-        # "India" with no city named still plausibly serves a city query.
-        if is_india(job_location) and not job_cities:
-            return "region"
+        if not job_cities:
+            # A posting that names a *state* and no city is not "somewhere in India" —
+            # it is somewhere specific, and Maharashtra is not Delhi. 104 of the 125
+            # state-only postings in the live corpus said "Maharashtra", and all of them
+            # were answering searches for Delhi, Bengaluru and Hyderabad alike.
+            job_states = states_in(job_location)
+            if job_states:
+                return "region" if job_states & states_for(city) else remote_ok
+            # "India" with no place named at all still plausibly serves a city query.
+            if is_india(job_location):
+                return "region"
         return remote_ok
 
     # Non-Indian query location: plain token overlap.

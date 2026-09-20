@@ -285,6 +285,15 @@ GEO_SAMPLES: list[tuple[str, str, bool]] = [
     ("Bangalore, Chennai, Noida, Hyderabad +4 more", "Noida", False),
     ("Bengaluru; Gurugram", "Gurgaon", False),
     ("Bangalore Urban, Chennai", "Delhi", False),
+    # State-only postings: specific, not "somewhere in India".
+    ("Maharashtra, India", "Delhi", False),
+    ("Maharashtra, India", "Mumbai", False),
+    ("Maharashtra, India", "Pune", False),
+    ("Haryana, India", "Delhi", False),
+    ("Karnataka, India", "Bengaluru", False),
+    ("Kerala, India", "Hyderabad", False),
+    ("All India", "Delhi", False),
+    ("India", "Bengaluru", False),
 ]
 
 

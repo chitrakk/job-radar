@@ -79,6 +79,30 @@ def _rank(job: Job) -> int:
         return len(_SOURCE_RANK)
 
 
+def _merge_tags(primary: list[str], other: list[str]) -> list[str]:
+    """Union two tag sets without letting them contradict each other.
+
+    Tags of the form "Prefix: value" state a fact about the posting, and a plain union of
+    two merged records produced cards carrying both "Experience: 3-8 yrs" and
+    "Experience: 5-10 yrs" — 129 of them in one run. Two bands cannot both be right, and a
+    card that states both is worse than one that states the surviving record's own.
+    The primary is the higher-ranked source, so its value is the one to keep.
+    """
+    out: list[str] = []
+    claimed: set[str] = set()
+    for tag in list(primary) + list(other):
+        if tag in out:
+            continue
+        prefix, sep, _ = tag.partition(":")
+        if sep and not tag.startswith("also:"):
+            key = prefix.strip().lower()
+            if key in claimed:
+                continue
+            claimed.add(key)
+        out.append(tag)
+    return out[:16]
+
+
 def _merge(primary: Job, other: Job) -> Job:
     """Fold `other` into `primary`, keeping the richest value for each field.
 
@@ -104,7 +128,7 @@ def _merge(primary: Job, other: Job) -> Job:
         primary.location = other.location
     if not primary.apply_url and other.apply_url:
         primary.apply_url = other.apply_url
-    primary.tags = sorted(set(primary.tags) | set(other.tags))[:16]
+    primary.tags = _merge_tags(primary.tags, other.tags)
     primary.first_seen_at = min(primary.first_seen_at, other.first_seen_at)
     primary.last_seen_at = max(primary.last_seen_at, other.last_seen_at)
     # Record every board this turned up on, so the UI can say "also on LinkedIn".

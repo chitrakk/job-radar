@@ -215,3 +215,26 @@ def test_state_only_postings_rank_below_a_real_local_match() -> None:
     assert locality("New Delhi, Delhi, India", "Delhi") == "exact"
     assert locality("Haryana, India", "Delhi") == "region"
     assert locality("Maharashtra, India", "Delhi") == ""
+
+
+def test_merging_two_postings_never_states_two_experience_bands() -> None:
+    """A card carrying both "Experience: 3-8 yrs" and "Experience: 5-10 yrs" states a
+    contradiction and makes the reader pick. 129 live listings did exactly that."""
+    from jobradar.dedupe import _merge_tags
+
+    merged = _merge_tags(
+        ["Experience: 3-8 yrs", "Details on Naukri"],
+        ["Experience: 5-10 yrs", "Remote"],
+    )
+    assert merged.count("Experience: 3-8 yrs") == 1
+    assert "Experience: 5-10 yrs" not in merged
+    # Everything that is not a competing claim still merges.
+    assert "Details on Naukri" in merged and "Remote" in merged
+
+
+def test_cross_posting_markers_are_not_treated_as_competing_claims() -> None:
+    """"also:" records which boards a role appeared on — several are all true at once."""
+    from jobradar.dedupe import _merge_tags
+
+    merged = _merge_tags(["also:linkedin"], ["also:shine", "also:naukri_sitemap"])
+    assert merged == ["also:linkedin", "also:shine", "also:naukri_sitemap"]

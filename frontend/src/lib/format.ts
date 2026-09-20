@@ -68,3 +68,61 @@ export function sourceLabel(source: string): string {
 export function seniorityLabel(s: string): string {
   return s === "unknown" ? "" : s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+/**
+ * Acronyms that Naukri's URL slugs lose the case of, since a slug is all lowercase and
+ * word-capitalising it gives "Delhi Ncr" and "Evoke Hr". The backend now capitalises these
+ * at parse time, but the published corpus is rebuilt only every four hours and holds
+ * thousands of rows written before that — repairing on display fixes them now, and costs
+ * nothing once the data is already right.
+ *
+ * Deliberately conservative: only tokens that are near-certainly acronyms in Indian job
+ * data, and only applied to company and location, never to a job title where "It" or "Ai"
+ * can be an ordinary word.
+ */
+const ACRONYMS = new Set([
+  "ncr", "ey", "ibm", "tcs", "hcl", "kpmg", "pwc", "hdfc", "icici", "sbi", "hsbc",
+  "hr", "it", "ites", "bpo", "kpo", "bfsi", "nbfc", "mnc", "sme", "msme",
+  "ai", "ml", "sql", "aws", "gcp", "sap", "crm", "erp", "qa", "ui", "ux", "seo", "sem",
+  "llp", "pvt", "ltd", "inc", "llc", "uae", "usa", "uk", "us", "gst", "kyc", "cfa",
+  "mba", "bsc", "msc", "bca", "mca", "btech", "mtech", "ca", "cs", "cma",
+]);
+
+/** Repair slug-derived title case. Leaves already-correct text untouched. */
+export function fixCase(s: string): string {
+  if (!s) return s;
+  return s.replace(/\b[A-Za-z]{1,6}\b/g, (w) => {
+    const lower = w.toLowerCase();
+    // Only rewrite words that look slug-derived — "Ncr", not "NCR" and not "ncr".
+    if (!ACRONYMS.has(lower)) return w;
+    if (w !== lower.charAt(0).toUpperCase() + lower.slice(1)) return w;
+    // "Ltd"/"Pvt"/"Inc" read correctly in title case; they are here only so the
+    // capitalisation check above does not treat them as unknown words.
+    if (lower === "pvt" || lower === "ltd" || lower === "inc" || lower === "llc") return w;
+    return lower.toUpperCase();
+  });
+}
+
+/**
+ * Tags fit for display. Two things go wrong upstream: dedupe unions the tag sets of two
+ * merged postings, so a card can carry "Experience: 3-8 yrs" *and* "Experience: 5-10 yrs"
+ * and state a contradiction; and "also:" markers are rendered separately.
+ *
+ * Keeping the first of each "Prefix:" family is the honest choice here — the surviving
+ * record's own band — rather than showing both and making the reader pick.
+ */
+export function displayTags(tags: string[]): string[] {
+  const seenPrefix = new Set<string>();
+  const out: string[] = [];
+  for (const t of tags) {
+    if (t.startsWith("also:")) continue;
+    const colon = t.indexOf(":");
+    if (colon > 0) {
+      const prefix = t.slice(0, colon).toLowerCase();
+      if (seenPrefix.has(prefix)) continue;
+      seenPrefix.add(prefix);
+    }
+    out.push(t);
+  }
+  return out;
+}

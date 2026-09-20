@@ -14,7 +14,7 @@ GitHub Pages can only serve static files, so the scrapers do not run there. Inst
 
 ```
 GitHub Actions (cron, every 4h)
-  config/queries.yml → 17 sources → dedupe → rank → LLM enrich → corpus JSON
+  config/queries.yml → 18 sources → dedupe → rank → LLM enrich → corpus JSON
                                                                     │
                           ┌─────────────────────────────────────────┘
                           ▼
@@ -29,7 +29,7 @@ commits never bloat `main`) and copied into the Pages deploy.
 
 | | |
 | --- | --- |
-| **Find** | 17 sources, deduplicated across boards, ranked by relevance and recency. India-aware location matching. |
+| **Find** | 18 sources, deduplicated across boards, ranked by relevance and recency. India-aware location matching. |
 | **Score your CV** | Out of 100 across 8 weighted criteria, with grounded rewrite suggestions and the keywords a target role expects. |
 | **Draft outreach** | Finds who to contact, infers their email pattern, writes a LinkedIn note and a cold email — then checks its own output for AI slop. |
 | **Prep for interview** | Likely questions for *that* posting, STAR outlines from your real CV, and the gaps they will probe. |
@@ -72,7 +72,7 @@ defend in an interview.
 | Wellfound | Indian startups, salary bands on most listings. |
 | Naukri | India's largest board, via the sitemaps it publishes for crawlers — title, employer, cities, experience band and a link. No description or salary: those live only on the job page, which this never fetches. |
 
-All three answer a plain HTTP request from a GitHub Actions runner — no browser and no
+All four answer a plain HTTP request from a GitHub Actions runner — no browser and no
 proxy — which was measured, not assumed: run the **Probe source blocking** workflow to
 re-check any time. Every path fetched is allowed by the site's `robots.txt`, requests are
 paced per host, and each URL is fetched once per run. They are HTML scrapes, so a site

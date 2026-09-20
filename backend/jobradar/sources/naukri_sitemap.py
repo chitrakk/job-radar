@@ -142,8 +142,67 @@ def _strip_trailing_places(parts: list[str]) -> tuple[list[str], list[str]]:
     return parts, places
 
 
+# A slug is all lowercase, so capitalising each word turns "delhi-ncr" into "Delhi Ncr" and
+# "ey" into "Ey". These are the tokens where that is visibly wrong in Indian job data.
+ACRONYMS = {
+    "ncr",
+    "ey",
+    "ibm",
+    "tcs",
+    "hcl",
+    "kpmg",
+    "pwc",
+    "hdfc",
+    "icici",
+    "sbi",
+    "hsbc",
+    "hr",
+    "it",
+    "ites",
+    "bpo",
+    "kpo",
+    "bfsi",
+    "nbfc",
+    "mnc",
+    "sme",
+    "msme",
+    "ai",
+    "ml",
+    "sql",
+    "aws",
+    "gcp",
+    "sap",
+    "crm",
+    "erp",
+    "qa",
+    "ui",
+    "ux",
+    "seo",
+    "llp",
+    "uae",
+    "usa",
+    "uk",
+    "gst",
+    "kyc",
+    "cfa",
+    "mba",
+    "bsc",
+    "msc",
+    "bca",
+    "mca",
+}
+
+
 def _titlecase(slug: str) -> str:
-    return " ".join(w.capitalize() if not w.isupper() else w for w in slug.split("-"))
+    words = []
+    for w in slug.split("-"):
+        if w.isupper():
+            words.append(w)
+        elif w.lower() in ACRONYMS:
+            words.append(w.upper())
+        else:
+            words.append(w.capitalize())
+    return " ".join(words)
 
 
 def parse_job_url(url: str, lastmod: str, companies: set[str]) -> Job | None:

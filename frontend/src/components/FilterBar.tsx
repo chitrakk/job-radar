@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Filters, JobEntry } from "../types";
 import { sourceLabel } from "../lib/format";
 
@@ -10,33 +11,44 @@ interface Props {
 }
 
 const SELECT =
-  "rounded-lg border border-line bg-surface px-2.5 py-2 text-sm text-ink outline-none focus:border-accent";
+  "rounded-lg border border-line bg-surface px-2 py-1.5 text-[13px] text-ink outline-none focus:border-accent";
+/** An active filter has to look different from an unset one, or you cannot tell why a
+ *  search returned four results without opening every dropdown. */
+const SELECT_ON =
+  "rounded-lg border border-accent bg-accent/10 px-2 py-1.5 text-[13px] font-medium text-accent outline-none";
 
 export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Props) {
   // Facets are derived from the corpus rather than hardcoded, so a source or seniority
   // that stops appearing disappears from the UI instead of offering an empty filter.
   const sources = [...new Set(jobs.map((j) => j.source))].sort();
-  const seniorities = [...new Set(jobs.map((j) => j.seniority))].filter((s) => s !== "unknown").sort();
+  const seniorities = [...new Set(jobs.map((j) => j.seniority))]
+    .filter((s) => s !== "unknown")
+    .sort();
 
-  const active =
-    filters.q ||
-    filters.location ||
-    filters.remote ||
-    filters.seniority ||
-    filters.source ||
-    filters.maxAgeDays ||
-    filters.minSalary;
+  const dropdownCount =
+    (filters.remote ? 1 : 0) +
+    (filters.seniority ? 1 : 0) +
+    (filters.source ? 1 : 0) +
+    (filters.maxAgeDays ? 1 : 0) +
+    (filters.minSalary ? 1 : 0);
+  const active = Boolean(filters.q || filters.location || dropdownCount);
+
+  // On a phone the six dropdowns filled the whole first screen, so you scrolled past 780px
+  // of controls before seeing a single job. They start collapsed and say how many are on.
+  const [openOnMobile, setOpenOnMobile] = useState(false);
+
+  const cls = (on: boolean) => (on ? SELECT_ON : SELECT);
 
   return (
     <div className="sticky top-0 z-10 border-b border-line bg-canvas/95 backdrop-blur">
-      <div className="mx-auto max-w-5xl px-4 py-3">
-        <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="mx-auto max-w-6xl px-4 py-2.5">
+        <div className="flex gap-2">
           <input
             type="search"
             value={filters.q}
             onChange={(e) => onChange({ q: e.target.value })}
             placeholder="Role, skill or company — e.g. data analyst, python, Razorpay"
-            className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent"
+            className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent"
             aria-label="Search jobs"
           />
           <input
@@ -44,16 +56,31 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
             value={filters.location}
             onChange={(e) => onChange({ location: e.target.value })}
             placeholder="Location"
-            className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent sm:w-44"
+            className="w-28 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent sm:w-40"
             aria-label="Filter by location"
           />
+          <button
+            onClick={() => setOpenOnMobile((v) => !v)}
+            aria-expanded={openOnMobile}
+            className={`shrink-0 rounded-lg border px-3 py-2 text-[13px] font-medium sm:hidden ${
+              dropdownCount
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-line text-muted"
+            }`}
+          >
+            Filters{dropdownCount ? ` (${dropdownCount})` : ""}
+          </button>
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div
+          className={`mt-2 flex-wrap items-center gap-1.5 ${
+            openOnMobile ? "flex" : "hidden"
+          } sm:flex`}
+        >
           <select
             value={filters.remote}
             onChange={(e) => onChange({ remote: e.target.value })}
-            className={SELECT}
+            className={cls(!!filters.remote)}
             aria-label="Work mode"
           >
             <option value="">Any mode</option>
@@ -65,7 +92,7 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
           <select
             value={filters.seniority}
             onChange={(e) => onChange({ seniority: e.target.value })}
-            className={SELECT}
+            className={cls(!!filters.seniority)}
             aria-label="Seniority"
           >
             <option value="">Any level</option>
@@ -79,7 +106,7 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
           <select
             value={filters.source}
             onChange={(e) => onChange({ source: e.target.value })}
-            className={SELECT}
+            className={cls(!!filters.source)}
             aria-label="Source"
           >
             <option value="">All sources</option>
@@ -93,7 +120,7 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
           <select
             value={filters.maxAgeDays}
             onChange={(e) => onChange({ maxAgeDays: Number(e.target.value) })}
-            className={SELECT}
+            className={cls(!!filters.maxAgeDays)}
             aria-label="Posted within"
           >
             <option value={0}>Any time</option>
@@ -106,7 +133,7 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
           <select
             value={filters.minSalary}
             onChange={(e) => onChange({ minSalary: Number(e.target.value) })}
-            className={SELECT}
+            className={cls(!!filters.minSalary)}
             aria-label="Minimum salary"
           >
             <option value={0}>Any salary</option>
@@ -127,17 +154,18 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
             <option value="salary">Highest salary</option>
           </select>
 
-          <span className="ml-auto text-sm text-muted">
-            {resultCount.toLocaleString("en-IN")} {resultCount === 1 ? "job" : "jobs"}
-          </span>
-          {active ? (
+          {active && (
             <button
               onClick={onReset}
-              className="rounded-lg border border-line px-2.5 py-2 text-sm text-muted hover:text-ink"
+              className="rounded-lg border border-line px-2 py-1.5 text-[13px] text-muted hover:text-ink"
             >
               Clear
             </button>
-          ) : null}
+          )}
+
+          <span className="ml-auto text-[13px] font-medium text-ink">
+            {resultCount.toLocaleString("en-IN")} {resultCount === 1 ? "job" : "jobs"}
+          </span>
         </div>
       </div>
     </div>

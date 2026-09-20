@@ -70,7 +70,7 @@ def test_multi_word_employers_win_over_short_ones() -> None:
     assert job is not None
     assert job.title == "Data Engineer"
     assert job.company == "Tata Consultancy Services"
-    assert job.location == "Gurugram, Delhi Ncr"
+    assert job.location == "Gurugram, Delhi NCR"
 
 
 def test_an_unknown_employer_is_dropped_rather_than_guessed() -> None:
@@ -110,7 +110,7 @@ def test_every_city_named_in_the_slug_is_kept() -> None:
         url("data-analyst-ey-pune-bengaluru-delhi-ncr-5-to-8-years-190925012345"), MOD, COMPANIES
     )
     assert job is not None
-    assert job.location == "Pune, Bengaluru, Delhi Ncr"
+    assert job.location == "Pune, Bengaluru, Delhi NCR"
     from jobradar.geo import matches_location
 
     # A posting listed in three cities has to answer a search for any of them.
@@ -213,7 +213,7 @@ async def test_a_missing_city_file_does_not_lose_the_others() -> None:
     src = NaukriSitemapSource({"cities": ["Delhi", "Pune"]})
     async with httpx.AsyncClient() as client:
         jobs = await src.search(client, Query(keywords=[]))
-    assert [j.company for j in jobs] == ["Ey"]
+    assert [j.company for j in jobs] == ["EY"]
 
 
 @pytest.mark.parametrize("compressed", [True, False])
@@ -227,3 +227,27 @@ async def test_company_index_handles_gzip_either_way(compressed: bool) -> None:
     async with httpx.AsyncClient() as client:
         found = await NaukriSitemapSource().company_index(client)
     assert "marriott" in found
+
+
+def test_acronyms_survive_the_slug_round_trip() -> None:
+    """A slug is all lowercase, so word-capitalising it published "Delhi Ncr" and "Ey"
+    on 130 live listings."""
+    job = parse_job_url(
+        url("data-analyst-ey-noida-gurugram-delhi-ncr-5-to-8-years-190925012345"),
+        MOD,
+        COMPANIES,
+    )
+    assert job is not None
+    assert job.company == "EY"
+    assert job.location == "Noida, Gurugram, Delhi NCR"
+
+
+def test_ordinary_words_are_not_shouted() -> None:
+    job = parse_job_url(
+        url("senior-research-analyst-marriott-new-delhi-2-to-7-years-190925012345"),
+        MOD,
+        COMPANIES,
+    )
+    assert job is not None
+    assert job.title == "Senior Research Analyst"
+    assert job.company == "Marriott"

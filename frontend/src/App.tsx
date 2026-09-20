@@ -9,12 +9,22 @@ import { SourceHealthBar } from "./components/SourceHealthBar";
 import { CVPanel } from "./components/CVPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { loadSettings, saveSettings, type Settings } from "./lib/settings";
+import {
+  countsByMark,
+  loadTracker,
+  saveTracker,
+  toggleMark,
+  type Mark,
+  type Tracker,
+} from "./lib/tracker";
 
 // The corpus sits next to the built site, so one relative base works for local preview and
 // for https://<user>.github.io/<repo>/ without knowing the repo name at build time.
 const DATA_BASE = new URL("data/", document.baseURI).href;
 
 const PAGE_SIZE = 40;
+
+type View = "jobs" | "saved" | "applied" | "cv" | "settings";
 
 /** Read filters from the URL so a search can be linked and shared. */
 function filtersFromUrl(): Filters {
@@ -54,8 +64,9 @@ export default function App() {
   const [dropped, setDropped] = useState(0);
   const [filters, setFilters] = useState<Filters>(filtersFromUrl);
   const [shown, setShown] = useState(PAGE_SIZE);
-  const [view, setView] = useState<"jobs" | "cv" | "settings">("jobs");
+  const [view, setView] = useState<View>("jobs");
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  const [tracker, setTracker] = useState<Tracker>(loadTracker);
   // Which posting the CV is being scored against. CVPanel always supported this, but
   // nothing passed it — so the keyword-alignment criterion, 18 of the 100 points, was
   // being judged against an empty string for every user.
@@ -65,6 +76,14 @@ export default function App() {
     setSettings((s) => {
       const next = { ...s, ...p };
       saveSettings(next);
+      return next;
+    });
+  }
+
+  function mark(id: string, m: Mark) {
+    setTracker((t) => {
+      const next = toggleMark(t, id, m);
+      saveTracker(next);
       return next;
     });
   }
@@ -110,43 +129,76 @@ export default function App() {
     setShown(PAGE_SIZE);
   }, [filters]);
 
+  useEffect(() => setShown(PAGE_SIZE), [view]);
+
   const search = useMemo(
     () => (jobs ? applyFilters(jobs, filters) : { jobs: [], relaxed: false, strongCount: 0 }),
     [jobs, filters],
   );
-  const results = search.jobs;
+
+  // A hidden job is one you have already judged and rejected. Showing it again on every
+  // visit is the thing that makes a long search exhausting, so it leaves the list.
+  const results = useMemo(
+    () => search.jobs.filter((j) => tracker[j.id]?.mark !== "hidden"),
+    [search.jobs, tracker],
+  );
+
+  /** Saved and Applied are lists of decisions, not searches, so the filters do not apply —
+   *  a shortlist you cannot see in full is not a shortlist. Most recently marked first. */
+  const marked = useMemo(() => {
+    if (!jobs || (view !== "saved" && view !== "applied")) return [];
+    const want: Mark = view === "saved" ? "saved" : "applied";
+    return jobs
+      .filter((j) => tracker[j.id]?.mark === want)
+      .sort((a, b) => (tracker[b.id]?.at ?? "").localeCompare(tracker[a.id]?.at ?? ""));
+  }, [jobs, tracker, view]);
+
+  const counts = useMemo(() => countsByMark(tracker), [tracker]);
+  const listing = view === "jobs" ? results : marked;
+  const isList = view === "jobs" || view === "saved" || view === "applied";
+  // The CV tools are the half of this that needs a key. Nudge once, quietly, and only
+  // while there is nothing to score with.
+  const needsSetup = !settings.cvText || !(settings.geminiKey || settings.groqKey);
 
   function patch(p: Partial<Filters>) {
     setFilters((f) => ({ ...f, ...p }));
   }
 
+  const tabs: [View, string, number | null][] = [
+    ["jobs", "Jobs", null],
+    ["saved", "Saved", counts.saved],
+    ["applied", "Applied", counts.applied],
+    ["cv", "My CV", null],
+    ["settings", "Settings", null],
+  ];
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4">
-          <h1 className="text-lg font-semibold tracking-tight text-ink">📡 Job Radar</h1>
-          <p className="hidden flex-1 text-sm text-muted lg:block">
-            Openings pulled from company job boards, LinkedIn and remote feeds
-          </p>
-          <nav className="ml-auto flex gap-1" aria-label="Sections">
-            {(
-              [
-                ["jobs", "Jobs"],
-                ["cv", "My CV"],
-                ["settings", "Settings"],
-              ] as const
-            ).map(([id, label]) => (
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+          <h1 className="text-base font-semibold tracking-tight text-ink">📡 Job Radar</h1>
+          <nav className="ml-auto flex flex-wrap gap-1" aria-label="Sections">
+            {tabs.map(([id, label, count]) => (
               <button
                 key={id}
                 onClick={() => setView(id)}
                 aria-current={view === id ? "page" : undefined}
                 className={
                   view === id
-                    ? "rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white"
-                    : "rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-muted hover:text-ink"
+                    ? "rounded-lg bg-accent px-2.5 py-1.5 text-[13px] font-medium text-white"
+                    : "rounded-lg border border-line px-2.5 py-1.5 text-[13px] font-medium text-muted hover:text-ink"
                 }
               >
                 {label}
+                {count ? (
+                  <span
+                    className={`ml-1.5 rounded px-1 text-[11px] ${
+                      view === id ? "bg-white/20" : "bg-slate-500/15"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                ) : null}
               </button>
             ))}
           </nav>
@@ -165,7 +217,7 @@ export default function App() {
         />
       )}
 
-      <main className="mx-auto max-w-5xl px-4 py-5">
+      <main className="mx-auto max-w-6xl px-4 py-4">
         {view === "settings" && (
           <SettingsPanel
             settings={settings}
@@ -184,86 +236,138 @@ export default function App() {
           />
         )}
 
-        {view === "jobs" && (
+        {isList && (
           <>
-        {error && (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
-            <p className="font-medium text-ink">Could not load the job index.</p>
-            <p className="mt-1 text-muted">
-              {error}. If this site was just deployed, the first scrape may not have finished yet.
-            </p>
-          </div>
-        )}
+            {error && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
+                <p className="font-medium text-ink">Could not load the job index.</p>
+                <p className="mt-1 text-muted">
+                  {error}. If this site was just deployed, the first scrape may not have
+                  finished yet.
+                </p>
+              </div>
+            )}
 
-        {!jobs && !error && (
-          <div className="space-y-3" aria-busy>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-xl border border-line bg-surface" />
-            ))}
-          </div>
-        )}
+            {!jobs && !error && (
+              <div className="space-y-2" aria-busy>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-24 animate-pulse rounded-lg border border-line bg-surface"
+                  />
+                ))}
+              </div>
+            )}
 
-        {/* A damaged index is worth admitting: it means a scraper is returning junk, and
-            the counts on this page are lower than the source actually published. */}
-        {dropped > 0 && (
-          <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-muted">
-            {dropped.toLocaleString("en-IN")} listing{dropped === 1 ? "" : "s"} in the last
-            refresh were unreadable and have been left out.
-          </div>
-        )}
+            {view === "jobs" && jobs && needsSetup && (
+              <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-accent/30 bg-accent/5 px-3.5 py-2.5 text-[13px]">
+                <p className="text-ink">
+                  Add your CV and a free API key to score any posting against it, draft
+                  outreach and prep interviews.
+                </p>
+                <button
+                  onClick={() => setView("settings")}
+                  className="ml-auto rounded-lg bg-accent px-2.5 py-1 font-medium text-white hover:opacity-90"
+                >
+                  Set up
+                </button>
+              </div>
+            )}
 
-        {/* A quiet fallback that returns worse matches without saying so is how a search
-            loses trust. If the bar had to come down, say it came down. */}
-        {jobs && search.relaxed && (
-          <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
-            <p className="text-ink">
-              {search.strongCount === 0
-                ? "Nothing matches this closely."
-                : `Only ${search.strongCount} close ${search.strongCount === 1 ? "match" : "matches"}.`}{" "}
-              Showing near misses too — widen the location or drop a filter for better ones.
-            </p>
-          </div>
-        )}
+            {/* A damaged index is worth admitting: it means a scraper is returning junk,
+                and the counts on this page are lower than the source actually published. */}
+            {view === "jobs" && dropped > 0 && (
+              <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3.5 py-2.5 text-[13px] text-muted">
+                {dropped.toLocaleString("en-IN")} listing{dropped === 1 ? "" : "s"} in the last
+                refresh were unreadable and have been left out.
+              </div>
+            )}
 
-        {jobs && results.length === 0 && (
-          <div className="rounded-xl border border-line bg-surface p-8 text-center">
-            <p className="font-medium text-ink">No jobs match these filters.</p>
-            <p className="mt-1 text-sm text-muted">
-              Try a broader keyword, or clear the location and date filters.
-            </p>
-          </div>
-        )}
+            {/* A quiet fallback that returns worse matches without saying so is how a
+                search loses trust. If the bar had to come down, say it came down. */}
+            {view === "jobs" && jobs && search.relaxed && (
+              <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3.5 py-2.5 text-[13px]">
+                <p className="text-ink">
+                  {search.strongCount === 0
+                    ? "Nothing matches this closely."
+                    : `Only ${search.strongCount} close ${
+                        search.strongCount === 1 ? "match" : "matches"
+                      }.`}{" "}
+                  Showing near misses too — widen the location or drop a filter for better
+                  ones.
+                </p>
+              </div>
+            )}
 
-        <div className="space-y-3">
-          {results.slice(0, shown).map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              dataBase={DATA_BASE}
-              settings={settings}
-              onScoreCV={(role, description) => {
-                setCvTarget({ role, description });
-                setView("cv");
-              }}
-            />
-          ))}
-        </div>
+            {jobs && listing.length === 0 && (
+              <div className="rounded-lg border border-line bg-surface p-8 text-center">
+                <p className="font-medium text-ink">
+                  {view === "saved"
+                    ? "Nothing saved yet."
+                    : view === "applied"
+                      ? "Nothing marked as applied yet."
+                      : "No jobs match these filters."}
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  {view === "jobs"
+                    ? "Try a broader keyword, or clear the location and date filters."
+                    : "Use the buttons on any job to build a shortlist you can come back to."}
+                </p>
+              </div>
+            )}
 
-        {results.length > shown && (
-          <button
-            onClick={() => setShown((n) => n + PAGE_SIZE)}
-            className="mx-auto mt-5 block rounded-lg border border-line bg-surface px-4 py-2 text-sm font-medium text-ink hover:border-accent"
-          >
-            Show more ({(results.length - shown).toLocaleString("en-IN")} remaining)
-          </button>
-        )}
+            <div className="space-y-2">
+              {listing.slice(0, shown).map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  dataBase={DATA_BASE}
+                  settings={settings}
+                  mark={tracker[job.id]?.mark}
+                  onMark={mark}
+                  onScoreCV={(role, description) => {
+                    setCvTarget({ role, description });
+                    setView("cv");
+                  }}
+                />
+              ))}
+            </div>
+
+            {listing.length > shown && (
+              <button
+                onClick={() => setShown((n) => n + PAGE_SIZE)}
+                className="mx-auto mt-4 block rounded-lg border border-line bg-surface px-4 py-2 text-sm font-medium text-ink hover:border-accent"
+              >
+                Show more ({(listing.length - shown).toLocaleString("en-IN")} remaining)
+              </button>
+            )}
+
+            {view === "jobs" && counts.hidden > 0 && (
+              <p className="mt-4 text-center text-xs text-muted">
+                {counts.hidden} hidden.{" "}
+                <button
+                  onClick={() => {
+                    const next = { ...tracker };
+                    for (const [id, v] of Object.entries(next)) {
+                      if (v.mark === "hidden") delete next[id];
+                    }
+                    setTracker(next);
+                    saveTracker(next);
+                  }}
+                  className="text-accent hover:underline"
+                >
+                  Unhide all
+                </button>
+              </p>
+            )}
           </>
         )}
       </main>
 
       <footer className="border-t border-line px-4 py-6 text-center text-xs text-muted">
         <p>
-          Aggregated from public job board APIs. Listings link to the original posting — apply there.
+          Aggregated from public job board APIs. Listings link to the original posting — apply
+          there.
         </p>
         {meta && <p className="mt-1">Last refreshed {new Date(meta.updated_at).toLocaleString()}</p>}
       </footer>

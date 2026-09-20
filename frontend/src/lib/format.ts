@@ -55,6 +55,9 @@ const SOURCE_LABELS: Record<string, string> = {
   foundit: "Foundit",
   timesjobs: "TimesJobs",
   instahyre: "Instahyre",
+  shine: "Shine",
+  internshala: "Internshala",
+  wellfound: "Wellfound",
 };
 
 export function sourceLabel(source: string): string {

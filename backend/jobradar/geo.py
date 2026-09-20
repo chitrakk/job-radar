@@ -100,6 +100,25 @@ def canonical_city(location: str) -> str | None:
     return best
 
 
+def cities_in(location: str) -> set[str]:
+    """Every canonical Indian city a location names.
+
+    Indian boards routinely list one opening in several cities — Shine's "Bangalore,
+    Chennai, Noida, Hyderabad +4 more" is typical. canonical_city() picks one of them, so
+    a posting that genuinely hires in Noida could fail a Delhi search because Bangalore
+    happened to be the name it resolved to.
+    """
+    low = location.lower()
+    tokens = _tokens(low)
+    found = {
+        city
+        for alias, city in _alias_to_city().items()
+        if (alias in low if " " in alias else alias in tokens)
+    }
+    # "greater noida" also contains "noida"; both resolve to the same city, so no clash.
+    return found
+
+
 def metro_area(city: str | None) -> str | None:
     """The wider job market a city sits in, e.g. Gurugram -> delhi."""
     return _metro_of().get(city) if city else None
@@ -180,13 +199,13 @@ def locality(
 
     city = canonical_city(q)
     if city:
-        job_city = canonical_city(job_location)
-        if job_city == city:
+        job_cities = cities_in(job_location)
+        if city in job_cities:
             return "exact"
-        if same_metro(job_city, city):
+        if any(same_metro(c, city) for c in job_cities):
             return "metro"
         # "India" with no city named still plausibly serves a city query.
-        if is_india(job_location) and not job_city:
+        if is_india(job_location) and not job_cities:
             return "region"
         return remote_ok
 

@@ -53,6 +53,21 @@ export function canonicalCity(location: string): string | null {
   return best;
 }
 
+/**
+ * Every canonical city a location names. Indian boards list one opening in several cities
+ * ("Bangalore, Chennai, Noida +5 more"), and picking just one of them could make a posting
+ * that genuinely hires in Noida fail a Delhi search.
+ */
+export function citiesIn(location: string): Set<string> {
+  const low = location.toLowerCase();
+  const toks = tokens(low);
+  const found = new Set<string>();
+  for (const [alias, city] of ALIAS_TO_CITY) {
+    if (alias.includes(" ") ? low.includes(alias) : toks.has(alias)) found.add(city);
+  }
+  return found;
+}
+
 /** Two cities a commuter would treat as one market — Gurugram and Delhi, say. */
 export function sameMetro(a: string | null, b: string | null): boolean {
   if (!a || !b) return false;
@@ -102,10 +117,10 @@ export function locality(
 
   const city = canonicalCity(q);
   if (city) {
-    const jobCity = canonicalCity(jobLocation);
-    if (jobCity === city) return "exact";
-    if (sameMetro(jobCity, city)) return "metro";
-    if (isIndia(jobLocation) && !jobCity) return "region";
+    const jobCities = citiesIn(jobLocation);
+    if (jobCities.has(city)) return "exact";
+    for (const c of jobCities) if (sameMetro(c, city)) return "metro";
+    if (isIndia(jobLocation) && jobCities.size === 0) return "region";
     return remoteOk;
   }
 

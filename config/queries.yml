@@ -17,8 +17,9 @@ defaults:
   # candidate can take). Without this the corpus fills with San Francisco roles that merely
   # matched a keyword — measured: 1356 jobs of which only ~70 were Indian.
   strict_location: true
-  # How many postings per run may have their description fetched from the source's own
-  # page. Only sources whose list endpoint omits descriptions (LinkedIn) need this, and
+  # How many postings per run, per source, may have their description fetched from the
+  # source's own page. Only sources whose list endpoint omits descriptions (LinkedIn,
+  # Shine) need this; sources drain their queues concurrently, and
   # each posting is fetched once in its life, not once per run. Raising it fills the
   # corpus in faster; lowering it reduces the chance LinkedIn starts rate-limiting us.
   hydrate_limit: 300

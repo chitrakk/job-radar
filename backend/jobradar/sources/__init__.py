@@ -19,7 +19,14 @@ def load_all() -> None:
     if _loaded:
         return
 
-    from . import adzuna, ats, hn_hiring, linkedin_guest, remote_feeds  # noqa: F401
+    from . import (  # noqa: F401
+        adzuna,
+        ats,
+        hn_hiring,
+        indian_boards,
+        linkedin_guest,
+        remote_feeds,
+    )
 
     try:
         from . import scraped  # noqa: F401

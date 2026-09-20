@@ -61,3 +61,26 @@ sources:
     enabled: false
   instahyre:
     enabled: false
+
+  # ------------------------------------------------ tier 2, verified reachable
+  # Scraped, but measured to answer a GitHub Actions runner with a plain HTTP request —
+  # no browser, no proxy. Re-check with the "Probe source blocking" workflow if one of
+  # these starts reporting zero jobs. Every path used is allowed by the site's robots.txt.
+  #
+  # `cities` adds one results page per city per keyword on top of the India-wide pages.
+  # It multiplies request volume, so keep the list short. Shine's "delhi" page already
+  # includes Gurugram and Noida postings; Internshala's does not, hence the difference.
+  shine:
+    enabled: true
+    pages: 2 # India-wide pages per keyword, 20 jobs each
+    cities: [delhi, bangalore, mumbai, hyderabad, pune, chennai]
+  internshala:
+    enabled: true
+    pages: 1
+    cities: [delhi, gurgaon, noida, bangalore, mumbai, hyderabad, pune]
+  wellfound:
+    enabled: true
+    pages: 2
+    # Wellfound place slugs, not free text: an unknown one redirects to a worldwide
+    # page, which the adapter detects and discards. "delhi" is one such; use gurgaon.
+    places: [india, gurgaon]

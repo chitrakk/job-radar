@@ -15,6 +15,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import httpx
+
 from .config import Config
 from .dedupe import dedupe, tier_summary
 from .fetcher import Blocked, make_client
@@ -100,34 +102,47 @@ async def hydrate(
     be published, and skips anything already stored with a description so a posting is
     fetched once in its life rather than once every four hours.
 
-    `limit` is a hard budget across all sources. LinkedIn is the source most likely to
-    start rate-limiting, and one thin description is a much smaller problem than losing
-    the source, so this is capped rather than exhaustive and failures are swallowed.
+    `limit` is a budget *per source*. Each source runs its own queue, concurrently with
+    the others, since they are different hosts with their own rate limits — one shared
+    queue let whichever board happened to be listed first use the whole budget. A source
+    that starts refusing us stops its own queue and nobody else's; one thin description
+    is a much smaller problem than losing the source.
     """
     sources = {s.name: s for s in build_sources(options) if s.needs_hydration}
     if not sources or limit <= 0:
         return 0
 
-    pending = [
-        j for j in jobs if j.source in sources and len(j.description) < 80 and j.id not in skip_ids
-    ][:limit]
-    if not pending:
-        return 0
+    queues: dict[str, list[Job]] = {name: [] for name in sources}
+    for job in jobs:
+        queue = queues.get(job.source)
+        if queue is not None and len(job.description) < 80 and job.id not in skip_ids:
+            if len(queue) < limit:
+                queue.append(job)
 
-    log.info("hydrating %d postings that arrived without a description", len(pending))
-    filled = 0
-    async with make_client() as client:
-        for job in pending:
+    async def drain(name: str, queue: list[Job], client: httpx.AsyncClient) -> int:
+        filled = 0
+        for job in queue:
             try:
-                if await sources[job.source].hydrate(client, job):
+                if await sources[name].hydrate(client, job):
                     filled += 1
             except Blocked:
-                log.warning("hydration blocked by %s; stopping early", job.source)
+                log.warning("hydration blocked by %s after %d; stopping it", name, filled)
                 break
             except Exception as exc:  # noqa: BLE001 - a thin posting is not a failed run
                 log.debug("hydrate %s failed: %s", job.url, exc)
-    log.info("hydrated %d of %d", filled, len(pending))
-    return filled
+        log.info("hydrated %d of %d from %s", filled, len(queue), name)
+        return filled
+
+    active = {name: q for name, q in queues.items() if q}
+    if not active:
+        return 0
+    log.info(
+        "hydrating %s",
+        ", ".join(f"{len(q)} from {name}" for name, q in active.items()),
+    )
+    async with make_client() as client:
+        results = await asyncio.gather(*(drain(n, q, client) for n, q in active.items()))
+    return sum(results)
 
 
 async def run(

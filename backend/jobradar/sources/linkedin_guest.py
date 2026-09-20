@@ -20,7 +20,7 @@ from selectolax.parser import HTMLParser
 
 from ..fetcher import Blocked, fetch_text
 from ..models import Job, Query, Tier
-from ..textutil import detect_remote, html_to_text, parse_salary
+from ..textutil import detect_remote, html_to_text, salary_from_text
 from .base import Source, register
 
 SEARCH = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
@@ -148,7 +148,9 @@ class LinkedInGuestSource(Source):
                     job.tags.append(tag)
 
         if job.salary_max is None:
-            pay = parse_salary(text)
+            # Prose, so this must find an explicit money phrase rather than reading
+            # whatever digits happen to appear first.
+            pay = salary_from_text(text)
             if pay.get("salary_max"):
                 job.salary_min = pay.get("salary_min")
                 job.salary_max = pay.get("salary_max")

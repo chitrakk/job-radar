@@ -35,7 +35,7 @@ from selectolax.parser import HTMLParser
 
 from ..fetcher import fetch, fetch_text
 from ..models import Job, Query, RemoteKind, Seniority, Tier
-from ..textutil import detect_remote, html_to_text, parse_salary
+from ..textutil import detect_remote, html_to_text, parse_salary, salary_from_text
 from .base import Source, register
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -294,7 +294,10 @@ class ShineSource(BoardSource):
             except ValueError:
                 pass
         job.remote = detect_remote(job.location, job.title, text[:2000])
-        if job.salary_max is None and (pay := parse_salary(text)):
+        # salary_from_text, not parse_salary: a description is prose, and running the
+        # label parser over its first 300 characters published one posting at ₹20.2 crore
+        # because the advert said "CTC: 2021 LPA".
+        if job.salary_max is None and (pay := salary_from_text(text)):
             for key, value in pay.items():
                 setattr(job, key, value)
         return True

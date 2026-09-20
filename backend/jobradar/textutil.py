@@ -76,6 +76,62 @@ _PERIOD = [
 
 _NUM = re.compile(r"\d[\d,.]*")
 
+# A phrase in a job description that is actually quoting money, rather than a sentence
+# that merely contains digits. Either a labelled field ("CTC: 12-18 LPA", "Salary — ₹8L")
+# or a bare figure carrying a currency symbol or an Indian scale word.
+_SALARY_PHRASE = re.compile(
+    r"(?:\b(?:ctc|salary|package|compensation|remuneration)\b\s*[:\-–]?\s*"
+    r"(?P<labelled>[^\n.;|]{0,40}))"
+    r"|(?P<bare>(?:₹|\brs\.?\s*|\binr\s*)\s*\d[\d,.]*\s*(?:lakhs?|lacs?|lpa|crores?|cr|l|k)?"
+    r"(?:\s*(?:-|–|to)\s*(?:₹|\brs\.?\s*|\binr\s*)?\s*\d[\d,.]*\s*"
+    r"(?:lakhs?|lacs?|lpa|crores?|cr|l|k)?)?"
+    r"|\d[\d,.]*\s*(?:-|–|to)\s*\d[\d,.]*\s*(?:lakhs?|lacs?|lpa|crores?)\b)",
+    re.I,
+)
+
+# The next field in a pasted advert. A labelled salary runs until one of these starts.
+_NEXT_FIELD = re.compile(
+    r"\b(experience|exp|location|notice|qualification|skills?|department|industry|company|"
+    r"role|position|vacanc|openings?|joining|shift|timing|education|gender|age)\b",
+    re.I,
+)
+
+# A phrase is only a salary if it carries a currency or an Indian scale word. "2-5 years"
+# does not, and must not be read as ₹5 lakh.
+_HAS_MONEY = re.compile(
+    r"₹|\brs\b|\binr\b|\$|£|€|\blakhs?\b|\blacs?\b|\blpa\b|\bcrores?\b|\bcr\b|(?<=\d)\s*[lk]\b",
+    re.I,
+)
+
+
+def salary_from_text(text: str) -> dict:
+    """Find a salary *quoted in prose*, or nothing.
+
+    parse_salary() is deliberately willing to read a short label like "12 - 14 Lakh/Yr".
+    Handing it the opening 300 characters of a job description is a different thing
+    entirely, and it produced exactly the failure you would expect: a live posting whose
+    description began "Hiring: Associate Product Manager ... CTC: 2021 LPA Experience"
+    was published at ₹20.2 crore a year.
+
+    So we locate a phrase that is actually about money and parse only that.
+    """
+    if not text:
+        return {}
+    for match in _SALARY_PHRASE.finditer(text[:4000]):
+        phrase = match.group("labelled") or match.group("bare") or ""
+        # "CTC: 2021 LPA Experience 2-5 years" — stop before the next field, or the years
+        # of experience get read as the package.
+        if cut := _NEXT_FIELD.search(phrase):
+            phrase = phrase[: cut.start()]
+        if not phrase.strip() or not _HAS_MONEY.search(phrase):
+            continue
+        pay = parse_salary(phrase)
+        if pay:
+            pay["salary_text"] = " ".join(phrase.split())[:120]
+            return pay
+    return {}
+
+
 _PERIOD_TO_YEAR = {"year": 1, "month": 12, "hour": 2080}
 
 
@@ -121,7 +177,12 @@ def parse_salary(text: str) -> dict:
             break
 
     numbers = [n for tok in _NUM.findall(blob) if (n := _to_float(tok)) is not None]
-    # Drop stray years ("2026") and percentages that slip into the same sentence.
+    # Drop stray years ("2026") and percentages that slip into the same sentence. A year
+    # is just as likely next to a scale word: a live posting read "CTC: 2021 LPA", which
+    # is a mangled "20-21 LPA", and 2021 lakh is ₹20.21 crore for an Associate Product
+    # Manager. Nobody quotes a package as a four-digit lakh figure.
+    if scale >= 100_000:
+        numbers = [n for n in numbers if not (1900 <= n <= 2100)]
     numbers = [n for n in numbers if not (1900 <= n <= 2100 and scale == 1)]
     if not numbers:
         return {}
@@ -146,8 +207,12 @@ def parse_salary(text: str) -> dict:
     lo_annual, hi_annual = lo * factor, hi * factor
 
     # Sanity floor/ceiling — parses that land outside a plausible band are discarded rather
-    # than shown, since they would poison the salary filter.
+    # than shown, since they would poison the salary filter. The rupee ceiling is much
+    # tighter than the generic one: ₹10 crore a year is already far beyond any advertised
+    # job, so a figure above it is a parse error, not a windfall.
     if hi_annual < 1_000 or hi_annual > 500_000_000:
+        return {}
+    if currency == "INR" and hi_annual > 100_000_000:
         return {}
 
     return {

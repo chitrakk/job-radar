@@ -137,8 +137,10 @@ export function JobCard({
         )}
       </div>
 
-      {/* One line of provenance instead of three stacked rows. */}
-      <p className="mt-0.5 truncate text-[13px] text-muted">
+      {/* One line of provenance instead of three stacked rows. data-testid so the stress
+          suite has a stable hook: it used to key off "h3 + p" and a Tailwind class, and
+          silently read an empty string the moment this markup was restyled. */}
+      <p data-testid="job-meta" className="mt-0.5 truncate text-[13px] text-muted">
         <span className="font-medium text-ink/80">{fixCase(job.company)}</span>
         {job.location && <> · {fixCase(job.location)}</>}
         {posted && <> · {posted}</>}
@@ -149,7 +151,10 @@ export function JobCard({
       {/* Chips are rendered only when the field exists. 81% of postings have no work mode
           and 44% no seniority, so a fixed row of slots would mostly be blank. */}
       {(job.remote !== "unknown" || seniority || topics.length > 0) && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+        <div
+          data-testid="job-chips"
+          className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]"
+        >
           {job.remote !== "unknown" && (
             <span
               className={`rounded px-1.5 py-0.5 font-medium capitalize ${REMOTE_STYLES[job.remote]}`}

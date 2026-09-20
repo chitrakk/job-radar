@@ -70,6 +70,7 @@ defend in an interview.
 | Shine | Large domestic board, strong in Delhi NCR. Skills, experience band and posted date on every listing. |
 | Internshala | Early-career roles with salary, skills and description inline. |
 | Wellfound | Indian startups, salary bands on most listings. |
+| Naukri | India's largest board, via the sitemaps it publishes for crawlers — title, employer, cities, experience band and a link. No description or salary: those live only on the job page, which this never fetches. |
 
 All three answer a plain HTTP request from a GitHub Actions runner — no browser and no
 proxy — which was measured, not assumed: run the **Probe source blocking** workflow to
@@ -81,8 +82,18 @@ than failing the run.
 **What a browser does and doesn't fix.** Playwright unlocks Indeed India and TimesJobs from
 a home connection, but from a datacenter IP Indeed serves Cloudflare's challenge and
 TimesJobs renders empty. Naukri and Foundit sit behind Akamai and block headless Chromium
-*harder* than a plain request; Naukri's own API answers `recaptcha required`. Those four
-need a residential proxy.
+*harder* than a plain request; Naukri's own API answers `recaptcha required`.
+
+**On Naukri specifically.** Its job pages are not read here, and should not be. They are
+behind Akamai plus a captcha, and Naukri's `robots.txt` names and blocks AI crawlers
+(`claudebot`, `GPTBot`, `PerplexityBot`) with `Disallow: /`. Getting at them would mean
+defeating an access control the operator deliberately runs, and a residential proxy
+changes the IP rather than the consent. What the adapter reads instead is what Naukri
+publishes *for* crawlers — the per-city job sitemaps and the employer index — which return
+200 to an ordinary request. A listing is emitted only when its employer matches Naukri's
+own company index, because the URL has no delimiter between job title and employer and
+guessing it produced confident nonsense ("Assistant Research Scientist" at "Optometry
+Pandorum Technologies"). That is about a quarter of listings; the rest are dropped.
 
 ### Tier 2b — scraped with Scrapling, best-effort (disabled by default)
 

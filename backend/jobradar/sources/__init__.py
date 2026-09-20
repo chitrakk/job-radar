@@ -25,6 +25,7 @@ def load_all() -> None:
         hn_hiring,
         indian_boards,
         linkedin_guest,
+        naukri_sitemap,
         remote_feeds,
     )
 

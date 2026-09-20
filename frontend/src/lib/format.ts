@@ -58,6 +58,7 @@ const SOURCE_LABELS: Record<string, string> = {
   shine: "Shine",
   internshala: "Internshala",
   wellfound: "Wellfound",
+  naukri_sitemap: "Naukri",
 };
 
 export function sourceLabel(source: string): string {

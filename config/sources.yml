@@ -84,3 +84,14 @@ sources:
     # Wellfound place slugs, not free text: an unknown one redirects to a worldwide
     # page, which the adapter detects and discards. "delhi" is one such; use gurgaon.
     places: [india, gurgaon]
+
+  # Naukri, reconstructed from the sitemaps Naukri publishes for crawlers. It never
+  # fetches a job page: those are behind Akamai and a captcha, and Naukri's robots.txt
+  # blocks AI crawlers outright. Listings carry a title, employer, cities, experience
+  # band and a link — no description or salary, because those exist only on the page.
+  # A listing is emitted only when its employer matches Naukri's own company index,
+  # because the URL has no delimiter between job title and company; roughly a quarter
+  # qualify and the rest are dropped rather than guessed at.
+  naukri_sitemap:
+    enabled: true
+    cities: [Delhi, Noida, Bangalore, Chennai, Pune, Kolkata, Ahmedabad]

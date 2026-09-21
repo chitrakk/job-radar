@@ -19,8 +19,9 @@
  * experience level for what the query asked for.
  */
 import type { Filters, JobEntry } from "../types";
-import { locality, type Locality } from "./geo";
+import { bestLocality, type Locality } from "./geo";
 import {
+  intentForFamily,
   isNoiseTitle,
   normalise,
   seniorityDistance,
@@ -218,9 +219,38 @@ export interface SearchResult {
   strongCount: number;
 }
 
+/**
+ * Does every keyword appear somewhere in the posting?
+ *
+ * Used only when roles are picked from the list, where the keyword box narrows the chosen
+ * roles instead of ranking against them. Substring rather than token equality on purpose:
+ * this is a filter, not a score, so "python" should still find "Python3" and the role
+ * selection has already done the precision work.
+ */
+function keywordHit(job: JobEntry, terms: string[], haystack: string): boolean {
+  if (!terms.length) return true;
+  const hay = `${haystack} ${normalise(job.company)} ${normalise(job.location)}`;
+  return terms.every((t) => hay.includes(t));
+}
+
 export function applyFilters(jobs: JobEntry[], f: Filters): SearchResult {
-  const intent = understand(f.q);
-  const wantsLocation = Boolean(f.location.trim());
+  const roleIntents = f.roles
+    .map(intentForFamily)
+    .filter((i): i is Intent => i !== null);
+  const usingRoles = roleIntents.length > 0;
+
+  const qIntent = understand(f.q);
+  const hasQuery = Boolean(f.q.trim());
+
+  /**
+   * When roles come from the dropdown they *are* the search, and a keyword typed next to
+   * them narrows the result rather than competing to re-rank it. Letting both score would
+   * mean two intents fighting: "Data Scientist" + "python" put a Python tutoring vacancy
+   * above every data science role, because the tutor title matched the typed word exactly
+   * and the picked family only by alias.
+   */
+  const narrowTerms = usingRoles && hasQuery ? qIntent.terms : [];
+  const scoring = usingRoles || hasQuery;
 
   const scored: { job: JobEntry; s: number }[] = [];
 
@@ -235,20 +265,34 @@ export function applyFilters(jobs: JobEntry[], f: Filters): SearchResult {
     }
 
     let localityWeight = 1;
-    if (wantsLocation) {
+    if (f.cities.length) {
       // `summary` stands in for the description, which the index does not carry; it is
       // only consulted for the negative "US only" test, so a missing one is harmless.
-      const where = locality(job.location, f.location, {
+      const where = bestLocality(job.location, f.cities, {
         isRemote: job.remote === "remote",
         description: job.summary,
+        includeNearby: f.includeNearby,
       });
       if (!where) continue;
       localityWeight = LOCALITY_WEIGHT[where];
     }
 
-    const s = (f.q ? scoreJob(job, intent) : 1) * localityWeight;
-    if (f.q && s <= 0) continue;
-    scored.push({ job, s });
+    let s: number;
+    if (usingRoles) {
+      if (narrowTerms.length && !keywordHit(job, narrowTerms, haystackFor(job))) continue;
+      // Best of the chosen roles: ticking two families asks for either, so a job should
+      // be ranked by the one it actually is, not penalised for not being the other.
+      s = 0;
+      for (const intent of roleIntents) s = Math.max(s, scoreJob(job, intent));
+      if (s <= 0) continue;
+    } else if (hasQuery) {
+      s = scoreJob(job, qIntent);
+      if (s <= 0) continue;
+    } else {
+      s = 1;
+    }
+
+    scored.push({ job, s: s * localityWeight });
   }
 
   scored.sort((a, b) => b.s - a.s);
@@ -259,7 +303,7 @@ export function applyFilters(jobs: JobEntry[], f: Filters): SearchResult {
   let kept = scored;
   let strongCount = scored.length;
 
-  if (f.q) {
+  if (scoring) {
     const strong = scored.filter((x) => x.s >= RELEVANCE_FLOOR);
     strongCount = strong.length;
     kept = strong;

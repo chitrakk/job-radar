@@ -51,7 +51,14 @@ export interface JobDetail {
 
 export interface Filters {
   q: string;
-  location: string;
+  /** Canonical city keys from shared/locations.json. Empty means anywhere. OR semantics:
+   *  somebody who ticks Noida and Gurugram wants either, not both at once. */
+  cities: string[];
+  /** Role family ids from shared/role_taxonomy.json. Empty means any role. */
+  roles: string[];
+  /** Count a neighbouring city in the same metro as a match. On by default: Delhi, Noida
+   *  and Gurugram are one commuter market. Off for somebody who will not cross the NCR. */
+  includeNearby: boolean;
   remote: string;
   seniority: string;
   source: string;
@@ -60,13 +67,19 @@ export interface Filters {
   sort: "relevance" | "newest" | "salary";
 }
 
-export const EMPTY_FILTERS: Filters = {
-  q: "",
-  location: "",
-  remote: "",
-  seniority: "",
-  source: "",
-  maxAgeDays: 0,
-  minSalary: 0,
-  sort: "relevance",
-};
+/** A fresh blank filter set. A function rather than a shared constant because two of the
+ *  fields are arrays, and handing the same array to every reset invites a mutation bug. */
+export function emptyFilters(): Filters {
+  return {
+    q: "",
+    cities: [],
+    roles: [],
+    includeNearby: true,
+    remote: "",
+    seniority: "",
+    source: "",
+    maxAgeDays: 0,
+    minSalary: 0,
+    sort: "relevance",
+  };
+}

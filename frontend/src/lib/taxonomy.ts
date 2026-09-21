@@ -136,15 +136,59 @@ export function understand(query: string): Intent {
   intent.aliases = allPhrases(fam);
   intent.skills = fam.skills.map(normalise);
 
+  intent.rivals = rivalsOf(fam, intent.aliases);
+  return intent;
+}
+
+/** Sibling-role phrases that count as evidence a title is *not* this family. */
+function rivalsOf(fam: Family, ownAliases: string[]): string[] {
+  const out: string[] = [];
   for (const siblingId of fam.confused_with) {
     const sibling = FAMILIES.get(siblingId);
     if (!sibling) continue;
     for (const phrase of sibling.canonical.map(normalise)) {
       // A phrase that is also one of our own aliases is not evidence against us.
-      if (phrase && !intent.aliases.includes(phrase)) intent.rivals.push(phrase);
+      if (phrase && !ownAliases.includes(phrase)) out.push(phrase);
     }
   }
-  return intent;
+  return out;
+}
+
+export interface RoleOption {
+  value: string;
+  label: string;
+}
+
+/** The role families, for the picker. Order follows the taxonomy file, which runs from
+ *  data roles outwards — the order this search was built for. */
+export function roleOptions(): RoleOption[] {
+  return taxonomy.families.map((f) => ({ value: f.id, label: f.label }));
+}
+
+/**
+ * The Intent for a family chosen from a list.
+ *
+ * `understand()` cannot serve this: it works back from typed words to a family, and a
+ * picked family has no typed words. Going straight to the family is also strictly better
+ * evidence — there is no guessing to do — so this skips seniority detection entirely and
+ * lets the separate level dropdown own that.
+ */
+export function intentForFamily(familyId: string): Intent | null {
+  const fam = FAMILIES.get(familyId);
+  if (!fam) return null;
+
+  const primary = normalise(fam.canonical[0] ?? fam.label);
+  const aliases = allPhrases(fam);
+  return {
+    raw: fam.label,
+    normalised: primary,
+    terms: primary.split(" ").filter((t) => t.length > 1),
+    familyId,
+    aliases,
+    skills: fam.skills.map(normalise),
+    rivals: rivalsOf(fam, aliases),
+    seniority: "",
+  };
 }
 
 export function isNoiseTitle(title: string): boolean {

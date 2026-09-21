@@ -175,3 +175,149 @@ export function matchesLocation(
 ): boolean {
   return locality(jobLocation, queryLocation, opts) !== "";
 }
+
+/* ------------------------------------------------------------------ *
+ * Picking cities from a list rather than typing one.
+ * ------------------------------------------------------------------ */
+
+/** Cities whose canonical name is not what most people call them. The dropdown has to
+ *  show both, or somebody looking for Gurgaon scrolls past "Gurugram" without seeing it. */
+const CITY_LABELS: Record<string, string> = {
+  bengaluru: "Bengaluru (Bangalore)",
+  delhi: "Delhi / New Delhi",
+  gurugram: "Gurugram (Gurgaon)",
+  noida: "Noida / Greater Noida",
+  mumbai: "Mumbai (Bombay)",
+  chennai: "Chennai (Madras)",
+  kolkata: "Kolkata (Calcutta)",
+  kochi: "Kochi (Cochin)",
+  mysuru: "Mysuru (Mysore)",
+  vadodara: "Vadodara (Baroda)",
+  visakhapatnam: "Visakhapatnam (Vizag)",
+  thiruvananthapuram: "Thiruvananthapuram",
+  chandigarh: "Chandigarh / Mohali",
+  hyderabad: "Hyderabad / Secunderabad",
+  ahmedabad: "Ahmedabad / Gandhinagar",
+};
+
+/** The seven cities that carry most of the corpus, after NCR. */
+const METRO_ORDER = [
+  "bengaluru",
+  "mumbai",
+  "hyderabad",
+  "pune",
+  "chennai",
+  "kolkata",
+  "ahmedabad",
+];
+
+export interface CityOption {
+  value: string;
+  label: string;
+  group: string;
+}
+
+function titleCase(key: string): string {
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+/**
+ * The city list for the picker, NCR first.
+ *
+ * Ordering is not cosmetic here: this is a Delhi-NCR job search, and an alphabetical list
+ * puts Ahmedabad and Bhopal above the five cities that actually matter to it.
+ */
+export function cityOptions(): CityOption[] {
+  const ncr = METRO_AREAS.delhi ?? [];
+  const seen = new Set<string>();
+  const out: CityOption[] = [];
+
+  const push = (key: string, group: string) => {
+    if (seen.has(key) || !CITIES[key]) return;
+    seen.add(key);
+    out.push({ value: key, label: CITY_LABELS[key] ?? titleCase(key), group });
+  };
+
+  for (const c of ncr) push(c, "Delhi NCR");
+  for (const c of METRO_ORDER) push(c, "Other metros");
+  for (const c of Object.keys(CITIES).sort()) push(c, "Elsewhere in India");
+  return out;
+}
+
+/** Highest-to-lowest, so the best of several selected cities is the one that ranks. */
+const LOCALITY_RANK: Record<Locality, number> = {
+  exact: 4,
+  metro: 3,
+  region: 2,
+  remote: 1,
+  "": 0,
+};
+
+/**
+ * How well a posting satisfies a *set* of chosen cities — the best match among them.
+ *
+ * Deliberately not `cities.some(c => locality(job, c))`, for two reasons.
+ *
+ * The cheap one: that recomputes `citiesIn` for every selected city on every job, and it
+ * throws away the distinction between an exact hit and a remote pass-through, which is
+ * what keeps real Noida jobs above "Anywhere in the World" ones.
+ *
+ * The load-bearing one: `locality` treats a posting that names no city we know, and no
+ * state, as a "region" match for *whatever city you asked for*, on the grounds that it is
+ * at least in India. That is tolerable for a typed box and wrong for a picker. Measured on
+ * the live corpus, picking Noida returned 1,027 postings and picking Gurugram returned the
+ * same 1,027 — because 268 of them matched on nothing more than the word "India", among
+ * them "Nanakramguda, India", which is in Hyderabad. So here a bare country-level match
+ * does not satisfy a named city; only a city, its metro, or a state that actually contains
+ * it does.
+ *
+ * `locality` itself is left alone on purpose: it is mirrored by geo.py and pinned by
+ * test_shared_parity.py, and the backend ranks with it.
+ */
+export function bestLocality(
+  jobLocation: string,
+  cities: string[],
+  opts: { isRemote?: boolean; description?: string; includeNearby?: boolean } = {},
+): Locality {
+  if (!cities.length) return "exact";
+
+  const { isRemote = false, description = "", includeNearby = true } = opts;
+  const remoteOk: Locality =
+    isRemote && isAnywhereRemote(jobLocation, description) ? "remote" : "";
+
+  // Computed once for the posting, then tested against each chosen city.
+  const jobCities = citiesIn(jobLocation);
+  const jobStates = jobCities.size ? null : statesIn(jobLocation);
+
+  let best: Locality = "";
+  for (const city of cities) {
+    let here: Locality = "";
+
+    if (jobCities.has(city)) {
+      here = "exact";
+    } else if (includeNearby) {
+      for (const c of jobCities) {
+        if (sameMetro(c, city)) {
+          here = "metro";
+          break;
+        }
+      }
+    }
+
+    if (!here && jobCities.size === 0 && jobStates && jobStates.size) {
+      // A posting naming only a state answers a city in that state, nothing wider.
+      const allowed = statesFor(city);
+      for (const s of jobStates) {
+        if (allowed.has(s)) {
+          here = "region";
+          break;
+        }
+      }
+    }
+
+    if (!here) here = remoteOk;
+    if (LOCALITY_RANK[here] > LOCALITY_RANK[best]) best = here;
+    if (best === "exact") break;
+  }
+  return best;
+}

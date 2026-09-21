@@ -38,4 +38,7 @@ jobs:
       - working-directory: frontend
         run: |
           npm ci
+          # The city and role filters decide what the whole site shows, and a wrong answer
+          # there looks exactly like a right one. Run them before the build.
+          npm test
           npm run build

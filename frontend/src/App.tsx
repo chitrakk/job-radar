@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Filters, JobEntry, Meta, SourceHealth } from "./types";
-import { EMPTY_FILTERS } from "./types";
+import { emptyFilters } from "./types";
 import { applyFilters } from "./lib/search";
 import { parseCorpus } from "./lib/corpus";
+import { canonicalCity } from "./lib/geo";
 import { FilterBar } from "./components/FilterBar";
 import { JobCard } from "./components/JobCard";
 import { SourceHealthBar } from "./components/SourceHealthBar";
@@ -26,13 +27,32 @@ const PAGE_SIZE = 40;
 
 type View = "jobs" | "saved" | "applied" | "cv" | "settings";
 
+/** Comma-separated URL list → array, with the blanks dropped. */
+function parseList(raw: string | null): string[] {
+  if (!raw) return [];
+  return [...new Set(raw.split(",").map((v) => v.trim()).filter(Boolean))];
+}
+
 /** Read filters from the URL so a search can be linked and shared. */
 function filtersFromUrl(): Filters {
   const p = new URLSearchParams(location.search);
+
+  // `loc` was a single free-text city before the picker existed. Links that people have
+  // already bookmarked or shared should keep working, so it is read as a one-city
+  // selection when no `cities` list is present.
+  let cities = parseList(p.get("cities"));
+  if (!cities.length) {
+    const legacy = (p.get("loc") ?? "").trim();
+    const city = legacy ? canonicalCity(legacy) : null;
+    if (city) cities = [city];
+  }
+
   return {
-    ...EMPTY_FILTERS,
+    ...emptyFilters(),
     q: p.get("q") ?? "",
-    location: p.get("loc") ?? "",
+    cities,
+    roles: parseList(p.get("roles")),
+    includeNearby: p.get("near") !== "0",
     remote: p.get("remote") ?? "",
     seniority: p.get("level") ?? "",
     source: p.get("src") ?? "",
@@ -45,7 +65,9 @@ function filtersFromUrl(): Filters {
 function urlFromFilters(f: Filters): string {
   const p = new URLSearchParams();
   if (f.q) p.set("q", f.q);
-  if (f.location) p.set("loc", f.location);
+  if (f.cities.length) p.set("cities", f.cities.join(","));
+  if (f.roles.length) p.set("roles", f.roles.join(","));
+  if (!f.includeNearby) p.set("near", "0");
   if (f.remote) p.set("remote", f.remote);
   if (f.seniority) p.set("level", f.seniority);
   if (f.source) p.set("src", f.source);
@@ -213,7 +235,7 @@ export default function App() {
           onChange={patch}
           jobs={jobs}
           resultCount={results.length}
-          onReset={() => setFilters(EMPTY_FILTERS)}
+          onReset={() => setFilters(emptyFilters())}
         />
       )}
 
@@ -310,7 +332,9 @@ export default function App() {
                 </p>
                 <p className="mt-1 text-sm text-muted">
                   {view === "jobs"
-                    ? "Try a broader keyword, or clear the location and date filters."
+                    ? filters.cities.length && !filters.includeNearby
+                      ? "Try switching 'include nearby cities' back on, or add another city."
+                      : "Try another job profile, add a city, or clear the date and salary filters."
                     : "Use the buttons on any job to build a shortlist you can come back to."}
                 </p>
               </div>

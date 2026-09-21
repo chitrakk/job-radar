@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Filters, JobEntry } from "../types";
 import { sourceLabel } from "../lib/format";
+import { cityOptions } from "../lib/geo";
+import { roleOptions } from "../lib/taxonomy";
+import { cityCounts, roleCounts } from "../lib/facets";
+import { MultiSelect } from "./MultiSelect";
 
 interface Props {
   filters: Filters;
@@ -17,6 +21,9 @@ const SELECT =
 const SELECT_ON =
   "rounded-lg border border-accent bg-accent/10 px-2 py-1.5 text-[13px] font-medium text-accent outline-none";
 
+const CITY_OPTIONS = cityOptions();
+const ROLE_OPTIONS = roleOptions();
+
 export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Props) {
   // Facets are derived from the corpus rather than hardcoded, so a source or seniority
   // that stops appearing disappears from the UI instead of offering an empty filter.
@@ -25,13 +32,22 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
     .filter((s) => s !== "unknown")
     .sort();
 
+  // Whole-corpus counts, so they do not flicker as you narrow. Recomputed only when a
+  // refresh brings in a new corpus.
+  const cityN = useMemo(() => cityCounts(jobs), [jobs]);
+  const roleN = useMemo(() => roleCounts(jobs), [jobs]);
+
+  // Only the secondary row counts toward the mobile badge — roles and cities have their
+  // own always-visible controls and show their own state.
   const dropdownCount =
     (filters.remote ? 1 : 0) +
     (filters.seniority ? 1 : 0) +
     (filters.source ? 1 : 0) +
     (filters.maxAgeDays ? 1 : 0) +
     (filters.minSalary ? 1 : 0);
-  const active = Boolean(filters.q || filters.location || dropdownCount);
+  const active = Boolean(
+    filters.q || filters.cities.length || filters.roles.length || dropdownCount,
+  );
 
   // On a phone the six dropdowns filled the whole first screen, so you scrolled past 780px
   // of controls before seeing a single job. They start collapsed and say how many are on.
@@ -40,24 +56,20 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
   const cls = (on: boolean) => (on ? SELECT_ON : SELECT);
 
   return (
-    <div className="sticky top-0 z-10 border-b border-line bg-canvas/95 backdrop-blur">
+    <div className="sticky top-0 z-20 border-b border-line bg-canvas/95 backdrop-blur">
       <div className="mx-auto max-w-6xl px-4 py-2.5">
         <div className="flex gap-2">
           <input
             type="search"
             value={filters.q}
             onChange={(e) => onChange({ q: e.target.value })}
-            placeholder="Role, skill or company — e.g. data analyst, python, Razorpay"
+            placeholder={
+              filters.roles.length
+                ? "Narrow these roles — a skill, or a company"
+                : "Role, skill or company — e.g. data analyst, python, Razorpay"
+            }
             className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent"
             aria-label="Search jobs"
-          />
-          <input
-            type="search"
-            value={filters.location}
-            onChange={(e) => onChange({ location: e.target.value })}
-            placeholder="Location"
-            className="w-28 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent sm:w-40"
-            aria-label="Filter by location"
           />
           <button
             onClick={() => setOpenOnMobile((v) => !v)}
@@ -70,6 +82,47 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
           >
             Filters{dropdownCount ? ` (${dropdownCount})` : ""}
           </button>
+        </div>
+
+        {/* Role and city are the two things this search is actually for, so they stay
+            visible at every width rather than hiding behind the Filters button. */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <MultiSelect
+            label="Job profile"
+            options={ROLE_OPTIONS}
+            selected={filters.roles}
+            onChange={(roles) => onChange({ roles })}
+            counts={roleN}
+          />
+          <MultiSelect
+            label="Cities"
+            options={CITY_OPTIONS}
+            selected={filters.cities}
+            onChange={(cities) => onChange({ cities })}
+            counts={cityN}
+            searchable
+            searchPlaceholder="Gurgaon, Bengaluru…"
+          />
+          {filters.cities.length > 0 && (
+            // Delhi, Noida and Gurugram share a metro, so without this every NCR pick
+            // returns the same 767 postings and choosing between them does nothing.
+            <label className="flex cursor-pointer items-center gap-1.5 text-[12px] text-muted">
+              <input
+                type="checkbox"
+                checked={filters.includeNearby}
+                onChange={(e) => onChange({ includeNearby: e.target.checked })}
+                className="size-3.5 accent-[var(--color-accent)]"
+              />
+              include nearby cities (Delhi ↔ Noida ↔ Gurugram)
+            </label>
+          )}
+
+          {/* The count belongs on this row, not with the secondary dropdowns: those
+              collapse on a phone, which hid the one number that says whether the filters
+              you just set left you anything. */}
+          <span className="ml-auto shrink-0 text-[13px] font-medium text-ink">
+            {resultCount.toLocaleString("en-IN")} {resultCount === 1 ? "job" : "jobs"}
+          </span>
         </div>
 
         <div
@@ -159,13 +212,9 @@ export function FilterBar({ filters, onChange, jobs, resultCount, onReset }: Pro
               onClick={onReset}
               className="rounded-lg border border-line px-2 py-1.5 text-[13px] text-muted hover:text-ink"
             >
-              Clear
+              Clear all
             </button>
           )}
-
-          <span className="ml-auto text-[13px] font-medium text-ink">
-            {resultCount.toLocaleString("en-IN")} {resultCount === 1 ? "job" : "jobs"}
-          </span>
         </div>
       </div>
     </div>

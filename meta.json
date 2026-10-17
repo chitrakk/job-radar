@@ -1,0 +1,28 @@
+{
+ "updated_at": "2026-10-17T18:15:37.061745+00:00",
+ "total_jobs": 10939,
+ "sources_ok": 18,
+ "sources_failed": 0,
+ "by_source": {
+  "shine": 4061,
+  "naukri_sitemap": 3774,
+  "internshala": 1177,
+  "wellfound": 516,
+  "linkedin": 454,
+  "weworkremotely": 311,
+  "arbeitnow": 157,
+  "ats:greenhouse": 144,
+  "himalayas": 139,
+  "ats:ashby": 70,
+  "remoteok": 57,
+  "hn_hiring": 31,
+  "ats:smartrecruiters": 22,
+  "ats:lever": 21,
+  "remotive": 5
+ },
+ "enriched": 0,
+ "tiers": {
+  "tier1": 8606,
+  "tier2": 2333
+ }
+}

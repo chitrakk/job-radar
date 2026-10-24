@@ -1,0 +1,164 @@
+[
+ {
+  "source": "ats:greenhouse",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 6676,
+  "error": "",
+  "duration_ms": 17155,
+  "checked_at": "2026-10-24T18:29:09.008668Z"
+ },
+ {
+  "source": "ats:lever",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 578,
+  "error": "",
+  "duration_ms": 9953,
+  "checked_at": "2026-10-24T18:29:01.807028Z"
+ },
+ {
+  "source": "ats:ashby",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 2462,
+  "error": "",
+  "duration_ms": 12890,
+  "checked_at": "2026-10-24T18:29:04.744122Z"
+ },
+ {
+  "source": "ats:workable",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 0,
+  "error": "",
+  "duration_ms": 0,
+  "checked_at": "2026-10-24T18:28:51.853481Z"
+ },
+ {
+  "source": "ats:smartrecruiters",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 100,
+  "error": "",
+  "duration_ms": 692,
+  "checked_at": "2026-10-24T18:28:52.546141Z"
+ },
+ {
+  "source": "ats:recruitee",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 0,
+  "error": "",
+  "duration_ms": 0,
+  "checked_at": "2026-10-24T18:28:51.853513Z"
+ },
+ {
+  "source": "hn_hiring",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 243,
+  "error": "",
+  "duration_ms": 4570,
+  "checked_at": "2026-10-24T18:28:56.424176Z"
+ },
+ {
+  "source": "naukri_sitemap",
+  "tier": "tier2",
+  "ok": true,
+  "jobs_found": 26394,
+  "error": "",
+  "duration_ms": 26056,
+  "checked_at": "2026-10-24T18:29:17.980620Z"
+ },
+ {
+  "source": "remoteok",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 99,
+  "error": "",
+  "duration_ms": 683,
+  "checked_at": "2026-10-24T18:28:52.608371Z"
+ },
+ {
+  "source": "arbeitnow",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 600,
+  "error": "",
+  "duration_ms": 3220,
+  "checked_at": "2026-10-24T18:28:55.146312Z"
+ },
+ {
+  "source": "himalayas",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 20,
+  "error": "",
+  "duration_ms": 142,
+  "checked_at": "2026-10-24T18:28:52.069225Z"
+ },
+ {
+  "source": "weworkremotely",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 95,
+  "error": "",
+  "duration_ms": 787,
+  "checked_at": "2026-10-24T18:28:52.713628Z"
+ },
+ {
+  "source": "adzuna",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 0,
+  "error": "",
+  "duration_ms": 0,
+  "checked_at": "2026-10-24T18:29:17.981160Z"
+ },
+ {
+  "source": "shine",
+  "tier": "tier2",
+  "ok": true,
+  "jobs_found": 4450,
+  "error": "",
+  "duration_ms": 353779,
+  "checked_at": "2026-10-24T18:30:30.288315Z"
+ },
+ {
+  "source": "internshala",
+  "tier": "tier2",
+  "ok": true,
+  "jobs_found": 8913,
+  "error": "",
+  "duration_ms": 460432,
+  "checked_at": "2026-10-24T18:30:58.593372Z"
+ },
+ {
+  "source": "wellfound",
+  "tier": "tier2",
+  "ok": true,
+  "jobs_found": 1398,
+  "error": "",
+  "duration_ms": 182074,
+  "checked_at": "2026-10-24T18:29:52.323803Z"
+ },
+ {
+  "source": "linkedin",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 330,
+  "error": "",
+  "duration_ms": 107009,
+  "checked_at": "2026-10-24T18:29:38.421824Z"
+ },
+ {
+  "source": "remotive",
+  "tier": "tier1",
+  "ok": true,
+  "jobs_found": 70,
+  "error": "",
+  "duration_ms": 26274,
+  "checked_at": "2026-10-24T18:29:23.030344Z"
+ }
+]
